@@ -113,7 +113,7 @@ export function LedgerManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Current Balance</p>
-              <p className="text-2xl font-bold text-gray-800">₹{currentBalance.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-800">RS.{currentBalance.toFixed(2)}</p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <DollarSign className="text-green-600" size={24} />
@@ -125,7 +125,7 @@ export function LedgerManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Income</p>
-              <p className="text-2xl font-bold text-green-700">₹{totalCredit.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-green-700">RS.{totalCredit.toFixed(2)}</p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <TrendingUp className="text-green-600" size={24} />
@@ -137,7 +137,7 @@ export function LedgerManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-700">₹{totalDebit.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-red-700">RS.{totalDebit.toFixed(2)}</p>
             </div>
             <div className="bg-red-100 p-3 rounded-full">
               <TrendingDown className="text-red-600" size={24} />
@@ -162,13 +162,13 @@ export function LedgerManagement() {
                 <option value="">Select Customer</option>
                 {customersWithBalance.map(customer => (
                   <option key={customer.id} value={customer.id}>
-                    {customer.name} (Balance: ₹{customer.balance.toFixed(2)})
+                    {customer.name} (Balance: RS.{customer.balance.toFixed(2)})
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
               <input
                 type="number"
                 required
@@ -223,7 +223,7 @@ export function LedgerManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
               <input
                 type="number"
                 required
@@ -279,7 +279,7 @@ export function LedgerManagement() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
               <input
                 type="number"
                 required
@@ -320,7 +320,7 @@ export function LedgerManagement() {
                   <p className="font-medium text-gray-800">{customer.name}</p>
                   <p className="text-sm text-gray-600">{customer.phone}</p>
                 </div>
-                <span className="font-bold text-orange-700">₹{customer.balance.toFixed(2)}</span>
+                <span className="font-bold text-orange-700">RS.{customer.balance.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -365,13 +365,13 @@ export function LedgerManagement() {
                   <td className="px-6 py-4 text-sm text-gray-800">{entry.description}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{entry.customerName || '-'}</td>
                   <td className="px-6 py-4 text-sm text-right text-red-600">
-                    {entry.debit > 0 ? `₹${entry.debit.toFixed(2)}` : '-'}
+                    {entry.debit > 0 ? `RS.${entry.debit.toFixed(2)}` : '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-right text-green-600">
-                    {entry.credit > 0 ? `₹${entry.credit.toFixed(2)}` : '-'}
+                    {entry.credit > 0 ? `RS.${entry.credit.toFixed(2)}` : '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-right font-medium text-gray-800">
-                    ₹{entry.balance.toFixed(2)}
+                    RS.{entry.balance.toFixed(2)}
                   </td>
                 </tr>
               ))}

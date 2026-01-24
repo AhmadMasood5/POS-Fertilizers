@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { productsAPI, customerApi, salesApi, ledgerApi, authApi } from '../utils/api';
+import { productsAPI, customerApi, salesApi, ledgerApi, authApi, suppliersApi, purchasesApi } from '../utils/api';
 
 export interface Product {
   id: string;
@@ -10,7 +10,36 @@ export interface Product {
   stock: number;
   minStock: number;
 }
+export interface Supplier {
+  id: string;
+  name: string;
+  contact: string;
+  phone: string;
+  address: string;
+  balance: number;
+  createdAt: string;
+}
+export interface PurchaseItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
 
+export interface Purchase {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  items: PurchaseItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  paymentMethod: 'cash' | 'credit';
+  amountPaid: number;
+  balance: number;
+  date: string;
+}
 export interface Customer {
   id: string;
   name: string;
@@ -70,6 +99,8 @@ interface AppContextType {
   customers: Customer[];
   sales: Sale[];
   ledgerEntries: LedgerEntry[];
+  suppliers: Supplier[];  
+  purchases: Purchase[];
   loading: boolean;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
@@ -80,6 +111,11 @@ interface AppContextType {
   addSale: (sale: Omit<Sale, 'id' | 'date'>) => Promise<void>;
   addLedgerEntry: (entry: Omit<LedgerEntry, 'id' | 'date' | 'balance'>) => Promise<void>;
   addPayment: (customerId: string, amount: number, description: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'balance' | 'createdAt'>) => Promise<void>;  
+  updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>; 
+  deleteSupplier: (id: string) => Promise<void>;  
+  addPurchase: (purchase: Omit<Purchase, 'id' | 'date'>) => Promise<void>;  
+  addSupplierPayment: (supplierId: string, amount: number, description: string) => Promise<void>;  
   refreshData: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -98,32 +134,86 @@ export function AppProvider({ children, initialShop, onSignOut }: AppProviderPro
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
+   const [suppliers, setSuppliers] = useState<Supplier[]>([]);  // ADD THIS LINE
+  const [purchases, setPurchases] = useState<Purchase[]>([]); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [productsRes, customersRes, salesRes, ledgerRes] = await Promise.all([
-        productsAPI.getAll(),
-        customerApi.getAll(),
-        salesApi.getAll(),
-        ledgerApi.getAll(),
-      ]);
+const loadData = async () => {
+  setLoading(true);
+  try {
+    const [productsRes, customersRes, salesRes, ledgerRes, suppliersRes, purchasesRes] = await Promise.all([
+      productsAPI.getAll(),
+      customerApi.getAll(),
+      salesApi.getAll(),
+      ledgerApi.getAll(),
+      suppliersApi.getAll(),
+      purchasesApi.getAll(),
+    ]);
 
-      setProducts(productsRes.products || []);
-      setCustomers(customersRes.customers || []);
-      setSales(salesRes.sales || []);
-      setLedgerEntries(ledgerRes.ledger || []);
+    setProducts(productsRes.products || []);
+    setCustomers(customersRes.customers || []);
+    setSales(salesRes.sales || []);
+    setLedgerEntries(ledgerRes.ledger || []);
+    setSuppliers(suppliersRes.suppliers || []);  
+    setPurchases(purchasesRes.purchases || []);
+  } catch (error) {
+    console.error('Failed to load data:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+  const addSupplier = async (supplier: Omit<Supplier, 'id' | 'balance' | 'createdAt'>) => {
+    try {
+      const result = await suppliersApi.create(supplier);
+      setSuppliers([...suppliers, result.supplier]);
     } catch (error) {
-      console.error('Failed to load data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Failed to add supplier:', error);
+      throw error;
     }
   };
+    const updateSupplier = async (id: string, updates: Partial<Supplier>) => {
+    try {
+      const result = await suppliersApi.update(id, updates);
+      setSuppliers(suppliers.map(s => s.id === id ? result.supplier : s));
+    } catch (error) {
+      console.error('Failed to update supplier:', error);
+      throw error;
+    }
+  };
+  const deleteSupplier = async (id: string) => {
+    try {
+      await suppliersApi.delete(id);
+      setSuppliers(suppliers.filter(s => s.id !== id));
+    } catch (error) {
+      console.error('Failed to delete supplier:', error);
+      throw error;
+    }
+  };
+    const addPurchase = async (purchase: Omit<Purchase, 'id' | 'date'>) => {
+    try {
+      const result = await purchasesApi.create(purchase);
+      setPurchases([result.purchase, ...purchases]);
+      await loadData(); // Reload to update stock, supplier balances, and ledger
+    } catch (error: any) {
+      console.error('Failed to create purchase:', error);
+      throw error;
+    }
+  };
+   const addSupplierPayment = async (supplierId: string, amount: number, description: string) => {
+    try {
+      await ledgerApi.supplierPayment(supplierId, amount, description);
+      await loadData();
+    } catch (error) {
+      console.error('Failed to record supplier payment:', error);
+      throw error;
+    }
+  };
+
+
 
   const refreshData = async () => {
     await loadData();
@@ -238,6 +328,8 @@ export function AppProvider({ children, initialShop, onSignOut }: AppProviderPro
         customers,
         sales,
         ledgerEntries,
+        suppliers,
+        purchases,
         loading,
         addProduct,
         updateProduct,
@@ -248,6 +340,11 @@ export function AppProvider({ children, initialShop, onSignOut }: AppProviderPro
         addSale,
         addLedgerEntry,
         addPayment,
+        addSupplier,  // Add this
+    updateSupplier,  // Add this
+    deleteSupplier,  // Add this
+    addPurchase,  // Add this
+    addSupplierPayment, 
         refreshData,
         signOut,
       }}

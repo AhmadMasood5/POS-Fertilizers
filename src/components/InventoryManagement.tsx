@@ -61,7 +61,7 @@ export function InventoryManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
-          <p className="text-gray-600 mt-1">Total Inventory Value: ₹{totalValue.toFixed(2)}</p>
+          <p className="text-gray-600 mt-1">Total Inventory Value: RS.{totalValue.toFixed(2)}</p>
         </div>
         <button
           onClick={() => {
@@ -116,7 +116,7 @@ export function InventoryManagement() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price per Unit (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Price per Unit (RS.)</label>
               <input
                 type="number"
                 required
@@ -199,7 +199,7 @@ export function InventoryManagement() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{product.category}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-800">₹{product.price.toFixed(2)}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-800">RS.{product.price.toFixed(2)}</td>
                 <td className="px-6 py-4 text-sm text-gray-600">
                   {product.stock} {product.unit}
                 </td>
@@ -215,7 +215,7 @@ export function InventoryManagement() {
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                  ₹{(product.price * product.stock).toFixed(2)}
+                  RS.{(product.price * product.stock).toFixed(2)}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">

@@ -169,7 +169,7 @@ export function POSInterface() {
               <h3 className="font-semibold text-gray-800 text-sm">{product.name}</h3>
               <p className="text-xs text-gray-500 mb-2">{product.category}</p>
               <div className="flex justify-between items-center">
-                <span className="font-bold text-green-700">₹{product.price}</span>
+                <span className="font-bold text-green-700">RS.{product.price}</span>
                 <span className={`text-xs font-medium ${
                   product.stock <= 0 ? 'text-red-600' : 
                   product.stock <= 10 ? 'text-orange-600' : 
@@ -208,7 +208,7 @@ export function POSInterface() {
                 }`}>
                   <div className="flex-1">
                     <p className="font-medium text-sm text-gray-800">{item.productName}</p>
-                    <p className="text-xs text-gray-500">₹{item.price} each</p>
+                    <p className="text-xs text-gray-500">RS.{item.price} each</p>
                     {hasStockIssue && (
                       <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                         <AlertTriangle size={10} />
@@ -231,7 +231,7 @@ export function POSInterface() {
                       <Plus size={14} />
                     </button>
                   </div>
-                  <span className="font-semibold text-sm w-16 text-right">₹{item.total.toFixed(2)}</span>
+                  <span className="font-semibold text-sm w-16 text-right">RS.{item.total.toFixed(2)}</span>
                   <button
                     onClick={() => removeFromCart(item.productId)}
                     className="p-1 hover:bg-red-50 rounded text-red-600"
@@ -264,7 +264,7 @@ export function POSInterface() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Discount (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Discount (RS.)</label>
               <input
                 type="number"
                 value={discount}
@@ -301,7 +301,7 @@ export function POSInterface() {
 
             {paymentMethod === 'credit' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid (₹)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid (RS.)</label>
                 <input
                   type="number"
                   value={amountPaid}
@@ -314,20 +314,20 @@ export function POSInterface() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal:</span>
-                <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                <span className="font-medium">RS.{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Discount:</span>
-                <span className="font-medium">-₹{discount.toFixed(2)}</span>
+                <span className="font-medium">-RS.{discount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-1">
                 <span>Total:</span>
-                <span className="text-green-700">₹{total.toFixed(2)}</span>
+                <span className="text-green-700">RS.{total.toFixed(2)}</span>
               </div>
               {paymentMethod === 'credit' && (
                 <div className="flex justify-between text-orange-600">
                   <span>Balance Due:</span>
-                  <span className="font-semibold">₹{Math.max(0, total - amountPaid).toFixed(2)}</span>
+                  <span className="font-semibold">RS.{Math.max(0, total - amountPaid).toFixed(2)}</span>
                 </div>
               )}
             </div>
