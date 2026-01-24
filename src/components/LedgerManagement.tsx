@@ -71,9 +71,10 @@ export function LedgerManagement() {
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-between items-center">
+      {/* Responsive Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-medium text-gray-800">Ledger Management</h2>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <p className="text-[10px] text-gray-400 uppercase font-semibold">Total Balance</p>
           <p className={`text-lg font-semibold ${currentBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             RS. {currentBalance.toLocaleString()}
@@ -81,6 +82,7 @@ export function LedgerManagement() {
         </div>
       </div>
 
+      {/* Action Buttons - Allow wrapping on small screens */}
       <div className="flex flex-wrap gap-2">
         <button onClick={() => setActiveForm('customer_payment')} className="bg-green-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-green-700 flex items-center gap-2">
           <TrendingUp size={14}/> Customer Payment
@@ -102,7 +104,8 @@ export function LedgerManagement() {
             <button onClick={closeForm} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Form Grid responsive fix */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {activeForm === 'supplier_payment' && (
               <>
                 <select className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.supplierId} onChange={(e) => setSuppPaymentData({ ...suppPaymentData, supplierId: e.target.value })}>
@@ -115,7 +118,7 @@ export function LedgerManagement() {
                 </select>
                 <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.amount || ''} onChange={(e) => setSuppPaymentData({...suppPaymentData, amount: parseFloat(e.target.value) || 0})} />
                 <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.description} onChange={(e) => setSuppPaymentData({...suppPaymentData, description: e.target.value})} />
-                <button onClick={handleSupplierPayment} className="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-medium">Save</button>
+                <button onClick={handleSupplierPayment} className="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Save</button>
               </>
             )}
             {activeForm === 'customer_payment' && (
@@ -130,26 +133,27 @@ export function LedgerManagement() {
                 </select>
                 <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.amount || ''} onChange={(e) => setCustPaymentData({...custPaymentData, amount: parseFloat(e.target.value) || 0})} />
                 <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.description} onChange={(e) => setCustPaymentData({...custPaymentData, description: e.target.value})} />
-                <button onClick={handleCustomerPayment} className="bg-green-600 text-white px-4 py-1.5 rounded text-xs font-medium">Save</button>
+                <button onClick={handleCustomerPayment} className="bg-green-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Save</button>
               </>
             )}
             {activeForm === 'expense' && (
               <>
-                <input type="text" placeholder="Description" className="p-1.5 border rounded text-xs outline-none md:col-span-2" value={expenseData.description} onChange={(e) => setExpenseData({...expenseData, description: e.target.value})} />
+                <input type="text" placeholder="Description" className="p-1.5 border rounded text-xs outline-none sm:col-span-1 lg:col-span-2" value={expenseData.description} onChange={(e) => setExpenseData({...expenseData, description: e.target.value})} />
                 <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={expenseData.amount || ''} onChange={(e) => setExpenseData({...expenseData, amount: parseFloat(e.target.value) || 0})} />
-                <button onClick={handleExpenseSubmit} className="bg-red-600 text-white px-4 py-1.5 rounded text-xs font-medium">Add</button>
+                <button onClick={handleExpenseSubmit} className="bg-red-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Add</button>
               </>
             )}
           </div>
         </div>
       )}
 
+      {/* Filter bar - stacks on mobile */}
       <div className="flex flex-col md:flex-row gap-3 items-center justify-between pt-2 border-t">
-        <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded">
+        <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded w-full md:w-auto">
           <Calendar size={14} className="text-gray-400" />
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-xs outline-none" />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-xs outline-none flex-1" />
           <span className="text-gray-300">to</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-xs outline-none" />
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-xs outline-none flex-1" />
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
@@ -163,40 +167,43 @@ export function LedgerManagement() {
         </div>
       </div>
 
+      {/* Table responsive fix - added overflow-x-auto */}
       <div className="bg-white rounded border border-gray-200 overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-            <tr>
-              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Date</th>
-              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Details</th>
-              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Debit (-)</th>
-              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Credit (+)</th>
-              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Balance</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filteredEntries.map((entry: any) => (
-              <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-xs text-gray-500">
-                  {new Date(entry.date).toLocaleDateString()}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="text-sm font-medium text-gray-700">{entry.description}</div>
-                  <div className="text-[10px] text-gray-400">{entry.customerName || entry.supplierName || 'General'}</div>
-                </td>
-                <td className="px-4 py-3 text-right text-xs text-red-600">
-                  {entry.debit > 0 ? entry.debit.toLocaleString() : '-'}
-                </td>
-                <td className="px-4 py-3 text-right text-xs text-green-600">
-                  {entry.credit > 0 ? entry.credit.toLocaleString() : '-'}
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
-                  {entry.balance.toLocaleString()}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[600px]">
+            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Date</th>
+                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Details</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Debit (-)</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Credit (+)</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Balance</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredEntries.map((entry: any) => (
+                <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs text-gray-500">
+                    {new Date(entry.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium text-gray-700">{entry.description}</div>
+                    <div className="text-[10px] text-gray-400">{entry.customerName || entry.supplierName || 'General'}</div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs text-red-600 font-medium">
+                    {entry.debit > 0 ? entry.debit.toLocaleString() : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-xs text-green-600 font-medium">
+                    {entry.credit > 0 ? entry.credit.toLocaleString() : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                    {entry.balance.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
