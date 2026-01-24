@@ -9,7 +9,6 @@ export function SalesHistory() {
   const [endDate, setEndDate] = useState('');
   const [selectedSale, setSelectedSale] = useState<string | null>(null);
 
-  // Filter logic using type casting to avoid 'soldBy' property errors
   const filteredSales = (sales as any[]).filter(sale => {
     const matchesSearch = 
       sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -31,10 +30,8 @@ export function SalesHistory() {
 
   const selectedSaleDetails = (sales as any[]).find(s => s.id === selectedSale);
 
-  // Restored printReceipt Function
   const printReceipt = (sale: any) => {
     if (!sale) return;
-
     const printWindow = window.open('', '', 'height=600,width=800');
     if (!printWindow) {
       alert('Please allow popups to print receipts');
@@ -102,72 +99,76 @@ export function SalesHistory() {
       </body>
       </html>
     `;
-
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex justify-between items-center">
+      {/* Responsive Header & Filters */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-xl font-medium text-gray-800">Sales History</h2>
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded border border-gray-200 w-full sm:w-auto">
             <Calendar size={14} className="text-gray-400" />
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none" />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none flex-1" />
             <span className="text-gray-300 text-[11px]">to</span>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none" />
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none flex-1" />
           </div>
-          <div className="relative">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
             <input 
               type="text" 
-              placeholder="Search customer, invoice, staff..." 
+              placeholder="Search customer, invoice..." 
               value={searchTerm} 
               onChange={(e) => setSearchTerm(e.target.value)} 
-              className="pl-8 pr-3 py-1.5 border border-gray-200 rounded text-xs outline-none w-64 focus:border-green-500" 
+              className="pl-8 pr-3 py-1.5 border border-gray-200 rounded text-xs outline-none w-full focus:border-green-500" 
             />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sales Table with Horizontal Scroll Wrapper */}
         <div className="lg:col-span-2 bg-white rounded border border-gray-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-2 text-[10px] font-bold uppercase">Invoice</th>
-                <th className="px-4 py-2 text-[10px] font-bold uppercase">Date</th>
-                <th className="px-4 py-2 text-[10px] font-bold uppercase">Customer</th>
-                <th className="px-4 py-2 text-[10px] font-bold uppercase text-blue-600">Sold By</th>
-                <th className="px-4 py-2 text-right text-[10px] font-bold uppercase">Total</th>
-                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredSales.map((sale) => (
-                <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-xs font-medium text-gray-700">#{sale.id.slice(-6)}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(sale.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-xs text-gray-700">{sale.customerName}</td>
-                  <td className="px-4 py-3 text-xs font-medium text-blue-600 italic">{sale.soldBy || 'Admin'}</td>
-                  <td className="px-4 py-3 text-right text-xs font-semibold">RS. {sale.total.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button onClick={() => setSelectedSale(sale.id)} className="p-1 text-gray-400 hover:text-green-600">
-                        <FileText size={16} />
-                      </button>
-                      <button onClick={() => printReceipt(sale)} className="p-1 text-gray-400 hover:text-blue-600">
-                        <Printer size={16} />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left min-w-[600px]">
+              <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-2 text-[10px] font-bold uppercase">Invoice</th>
+                  <th className="px-4 py-2 text-[10px] font-bold uppercase">Date</th>
+                  <th className="px-4 py-2 text-[10px] font-bold uppercase">Customer</th>
+                  <th className="px-4 py-2 text-[10px] font-bold uppercase text-blue-600">Sold By</th>
+                  <th className="px-4 py-2 text-right text-[10px] font-bold uppercase">Total</th>
+                  <th className="px-4 py-2 text-center text-[10px] font-bold uppercase">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredSales.map((sale) => (
+                  <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-xs font-medium text-gray-700">#{sale.id.slice(-6)}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(sale.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700">{sale.customerName}</td>
+                    <td className="px-4 py-3 text-xs font-medium text-blue-600 italic">{sale.soldBy || 'Admin'}</td>
+                    <td className="px-4 py-3 text-right text-xs font-semibold">RS. {sale.total.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button onClick={() => setSelectedSale(sale.id)} className="p-1 text-gray-400 hover:text-green-600">
+                          <FileText size={16} />
+                        </button>
+                        <button onClick={() => printReceipt(sale)} className="p-1 text-gray-400 hover:text-blue-600">
+                          <Printer size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
+        {/* Invoice Detail Sidebar (Drops below on mobile) */}
         <div className="bg-white rounded border border-gray-200 p-4 shadow-sm h-fit">
           {selectedSaleDetails ? (
             <div className="space-y-4">
