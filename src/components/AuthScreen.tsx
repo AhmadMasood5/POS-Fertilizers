@@ -323,7 +323,73 @@ const handleSignIn = async (e: React.FormEvent) => {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                   <p className="text-sm font-medium text-green-900">💰 Payment Details:</p>
                   <p className="text-xs text-green-800 mt-1">
-                    Contact admin for bank details: <strong>admin@fertilizerpos.com</strong>
+                    <div style={{ 
+  backgroundColor: '#fff3cd', 
+  padding: '15px', 
+  borderRadius: '8px',
+  border: '1px solid #ffc107',
+  marginBottom: '15px'
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+    <span style={{ fontSize: '18px', marginRight: '8px' }}>💰</span>
+    <strong>Payment Details:</strong>
+  </div>
+  
+  <div style={{ marginBottom: '12px' }}>
+    Contact admin for bank details: <strong>03424315253</strong>
+  </div>
+  
+  <div style={{ 
+    display: 'flex', 
+    gap: '12px', 
+    flexWrap: 'wrap',
+    alignItems: 'center'
+  }}>
+    <a 
+      href="https://wa.me/923424315253?text=Hi,%20I%20need%20bank%20details" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      style={{ 
+        backgroundColor: '#25D366', 
+        color: 'white', 
+        padding: '10px 20px', 
+        borderRadius: '6px', 
+        textDecoration: 'none',
+        fontSize: '14px',
+        fontWeight: '500',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        whiteSpace: 'nowrap',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
+      💬 WhatsApp
+    </a>
+    
+    <a 
+      href="tel:+923424315253"
+      style={{ 
+        backgroundColor: '#007bff', 
+        color: 'white', 
+        padding: '10px 20px', 
+        borderRadius: '6px', 
+        textDecoration: 'none',
+        fontSize: '14px',
+        fontWeight: '500',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        whiteSpace: 'nowrap',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
+      📞 Call
+    </a>
+  </div>
+</div>
                   </p>
                 </div>
                 <button
@@ -353,14 +419,7 @@ const handleSignIn = async (e: React.FormEvent) => {
           </button>
         </p>
 
-        {!isSignUp && (
-          <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-            <p className="text-xs text-purple-800">
-              <strong>🔐 Super Admin:</strong> Use email <code className="bg-purple-100 px-2 py-1 rounded">admin@fertilizerpos.com</code> to access the admin panel.
-              Create this account via Sign Up if you haven't already.
-            </p>
-          </div>
-        )}
+        
       </div>
     </div>
   );
