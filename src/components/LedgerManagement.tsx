@@ -1,390 +1,202 @@
 import { useState } from 'react';
 import { useApp } from './AppContext';
-import { Plus, DollarSign, TrendingDown, TrendingUp, ShoppingCart } from 'lucide-react';
+import { ledgerApi } from '../utils/api'; 
+import { Plus, Search, Truck, X, Calendar, FileText, TrendingUp } from 'lucide-react';
 
 export function LedgerManagement() {
-  const { ledgerEntries, customers, addLedgerEntry, addPayment } = useApp();
-  const [showExpenseForm, setShowExpenseForm] = useState(false);
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [expenseData, setExpenseData] = useState({
-    description: '',
-    amount: 0,
-  });
-  const [purchaseData, setPurchaseData] = useState({
-    description: '',
-    amount: 0,
-    supplierName: '',
-  });
-  const [paymentData, setPaymentData] = useState({
-    customerId: '',
-    amount: 0,
-    description: '',
-  });
+  const { ledgerEntries, customers, suppliers, refreshData } = useApp();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const [activeForm, setActiveForm] = useState<'customer_payment' | 'supplier_payment' | 'expense' | null>(null);
+  const [expenseData, setExpenseData] = useState({ description: '', amount: 0 });
+  const [custPaymentData, setCustPaymentData] = useState({ customerId: '', amount: 0, description: '' });
+  const [suppPaymentData, setSuppPaymentData] = useState({ supplierId: '', amount: 0, description: '' });
+
+  const closeForm = () => {
+    setActiveForm(null);
+    setExpenseData({ description: '', amount: 0 });
+    setCustPaymentData({ customerId: '', amount: 0, description: '' });
+    setSuppPaymentData({ supplierId: '', amount: 0, description: '' });
+  };
+
+  const handleCustomerPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await ledgerApi.paymentMethod(custPaymentData.customerId, custPaymentData.amount, custPaymentData.description || 'Customer Payment');
+      refreshData?.();
+      closeForm();
+    } catch (error) { alert('Failed to record customer payment'); }
+  };
+
+  const handleSupplierPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await ledgerApi.supplierPayment(suppPaymentData.supplierId, suppPaymentData.amount, suppPaymentData.description || 'Supplier Payment');
+      refreshData?.();
+      closeForm();
+    } catch (error) { alert('Failed to record supplier payment'); }
+  };
 
   const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addLedgerEntry({
-        type: 'expense',
-        description: expenseData.description,
-        debit: expenseData.amount,
-        credit: 0,
-      });
-      setExpenseData({ description: '', amount: 0 });
-      setShowExpenseForm(false);
-    } catch (error) {
-      alert('Failed to add expense. Please try again.');
-    }
+      await ledgerApi.addEntry({ type: 'expense', description: expenseData.description, debit: expenseData.amount, credit: 0, date: new Date().toISOString() });
+      refreshData?.();
+      closeForm();
+    } catch (error) { alert('Failed to add expense'); }
   };
 
-  const handlePurchaseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await addLedgerEntry({
-        type: 'purchase',
-        description: `Purchase from ${purchaseData.supplierName}: ${purchaseData.description}`,
-        debit: purchaseData.amount,
-        credit: 0,
-        customerName: purchaseData.supplierName, // Using customerName field for supplier
-      });
-      setPurchaseData({ description: '', amount: 0, supplierName: '' });
-      setShowPurchaseForm(false);
-    } catch (error) {
-      alert('Failed to add purchase. Please try again.');
+  const filteredEntries = ledgerEntries.filter((entry: any) => {
+    const matchesSearch = entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (entry.customerName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (entry.supplierName?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    let matchesDate = true;
+    if (startDate || endDate) {
+      const entryDate = new Date(entry.date);
+      if (startDate && entryDate < new Date(startDate)) matchesDate = false;
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        if (entryDate > endDateTime) matchesDate = false;
+      }
     }
-  };
+    return matchesSearch && matchesDate;
+  });
 
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const customer = customers.find(c => c.id === paymentData.customerId);
-    if (!customer) return;
-
-    try {
-      await addPayment(
-        paymentData.customerId,
-        paymentData.amount,
-        paymentData.description || `Payment received from ${customer.name}`
-      );
-      setPaymentData({ customerId: '', amount: 0, description: '' });
-      setShowPaymentForm(false);
-    } catch (error) {
-      alert('Failed to record payment. Please try again.');
-    }
-  };
-
-  const currentBalance = ledgerEntries.length > 0 ? ledgerEntries[0].balance : 0;
-  const totalCredit = ledgerEntries.reduce((sum, entry) => sum + entry.credit, 0);
-  const totalDebit = ledgerEntries.reduce((sum, entry) => sum + entry.debit, 0);
-  const customersWithBalance = customers.filter(c => c.balance > 0);
+  const currentBalance = ledgerEntries.length > 0 ? (ledgerEntries[0] as any).balance : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Ledger Management</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowPaymentForm(!showPaymentForm)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <DollarSign size={20} />
-            Record Payment
-          </button>
-          <button
-            onClick={() => setShowExpenseForm(!showExpenseForm)}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Plus size={20} />
-            Add Expense
-          </button>
-          <button
-            onClick={() => setShowPurchaseForm(!showPurchaseForm)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <ShoppingCart size={20} />
-            Add Purchase
-          </button>
+        <h2 className="text-xl font-medium text-gray-800">Ledger Management</h2>
+        <div className="text-right">
+          <p className="text-[10px] text-gray-400 uppercase font-semibold">Total Balance</p>
+          <p className={`text-lg font-semibold ${currentBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            RS. {currentBalance.toLocaleString()}
+          </p>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Current Balance</p>
-              <p className="text-2xl font-bold text-gray-800">RS.{currentBalance.toFixed(2)}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <DollarSign className="text-green-600" size={24} />
-            </div>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={() => setActiveForm('customer_payment')} className="bg-green-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-green-700 flex items-center gap-2">
+          <TrendingUp size={14}/> Customer Payment
+        </button>
+        <button onClick={() => setActiveForm('supplier_payment')} className="bg-blue-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+          <Truck size={14}/> Supplier Payment
+        </button>
+        <button onClick={() => setActiveForm('expense')} className="bg-red-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-red-700 flex items-center gap-2">
+          <Plus size={14}/> Shop Expense
+        </button>
+      </div>
+
+      {activeForm && (
+        <div className="bg-white p-4 rounded border border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              {activeForm.replace('_', ' ')}
+            </h3>
+            <button onClick={closeForm} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {activeForm === 'supplier_payment' && (
+              <>
+                <select className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.supplierId} onChange={(e) => setSuppPaymentData({ ...suppPaymentData, supplierId: e.target.value })}>
+                  <option value="">Select Supplier</option>
+                  {suppliers.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} (Payable: RS. {s.balance.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.amount || ''} onChange={(e) => setSuppPaymentData({...suppPaymentData, amount: parseFloat(e.target.value) || 0})} />
+                <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.description} onChange={(e) => setSuppPaymentData({...suppPaymentData, description: e.target.value})} />
+                <button onClick={handleSupplierPayment} className="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-medium">Save</button>
+              </>
+            )}
+            {activeForm === 'customer_payment' && (
+              <>
+                <select className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.customerId} onChange={(e) => setCustPaymentData({ ...custPaymentData, customerId: e.target.value })}>
+                  <option value="">Select Customer</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} (Receivable: RS. {c.balance.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.amount || ''} onChange={(e) => setCustPaymentData({...custPaymentData, amount: parseFloat(e.target.value) || 0})} />
+                <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.description} onChange={(e) => setCustPaymentData({...custPaymentData, description: e.target.value})} />
+                <button onClick={handleCustomerPayment} className="bg-green-600 text-white px-4 py-1.5 rounded text-xs font-medium">Save</button>
+              </>
+            )}
+            {activeForm === 'expense' && (
+              <>
+                <input type="text" placeholder="Description" className="p-1.5 border rounded text-xs outline-none md:col-span-2" value={expenseData.description} onChange={(e) => setExpenseData({...expenseData, description: e.target.value})} />
+                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={expenseData.amount || ''} onChange={(e) => setExpenseData({...expenseData, amount: parseFloat(e.target.value) || 0})} />
+                <button onClick={handleExpenseSubmit} className="bg-red-600 text-white px-4 py-1.5 rounded text-xs font-medium">Add</button>
+              </>
+            )}
           </div>
         </div>
+      )}
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Income</p>
-              <p className="text-2xl font-bold text-green-700">RS.{totalCredit.toFixed(2)}</p>
-            </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <TrendingUp className="text-green-600" size={24} />
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pt-2 border-t">
+        <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded">
+          <Calendar size={14} className="text-gray-400" />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-xs outline-none" />
+          <span className="text-gray-300">to</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-xs outline-none" />
         </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm">Total Expenses</p>
-              <p className="text-2xl font-bold text-red-700">RS.{totalDebit.toFixed(2)}</p>
-            </div>
-            <div className="bg-red-100 p-3 rounded-full">
-              <TrendingDown className="text-red-600" size={24} />
-            </div>
-          </div>
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+          <input 
+            type="text" 
+            placeholder="Search transaction..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)} 
+            className="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded text-xs outline-none focus:border-green-500" 
+          />
         </div>
       </div>
 
-      {/* Forms */}
-      {showPaymentForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Record Customer Payment</h3>
-          <form onSubmit={handlePaymentSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer</label>
-              <select
-                required
-                value={paymentData.customerId}
-                onChange={(e) => setPaymentData({ ...paymentData, customerId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Customer</option>
-                {customersWithBalance.map(customer => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name} (Balance: RS.{customer.balance.toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={paymentData.amount}
-                onChange={(e) => setPaymentData({ ...paymentData, amount: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-              <input
-                type="text"
-                value={paymentData.description}
-                onChange={(e) => setPaymentData({ ...paymentData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPaymentForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Record Payment
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {showExpenseForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Add Expense</h3>
-          <form onSubmit={handleExpenseSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input
-                type="text"
-                required
-                value={expenseData.description}
-                onChange={(e) => setExpenseData({ ...expenseData, description: e.target.value })}
-                placeholder="e.g., Rent, Utilities, Purchase"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={expenseData.amount}
-                onChange={(e) => setExpenseData({ ...expenseData, amount: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowExpenseForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                Add Expense
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {showPurchaseForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Add Purchase</h3>
-          <form onSubmit={handlePurchaseSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
-              <input
-                type="text"
-                required
-                value={purchaseData.supplierName}
-                onChange={(e) => setPurchaseData({ ...purchaseData, supplierName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input
-                type="text"
-                required
-                value={purchaseData.description}
-                onChange={(e) => setPurchaseData({ ...purchaseData, description: e.target.value })}
-                placeholder="e.g., Raw Materials, Equipment"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (RS.)</label>
-              <input
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={purchaseData.amount}
-                onChange={(e) => setPurchaseData({ ...purchaseData, amount: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowPurchaseForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Add Purchase
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Accounts Receivable */}
-      {customersWithBalance.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Accounts Receivable</h3>
-          <div className="space-y-2">
-            {customersWithBalance.map(customer => (
-              <div key={customer.id} className="flex justify-between items-center p-3 bg-orange-50 rounded">
-                <div>
-                  <p className="font-medium text-gray-800">{customer.name}</p>
-                  <p className="text-sm text-gray-600">{customer.phone}</p>
-                </div>
-                <span className="font-bold text-orange-700">RS.{customer.balance.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Ledger Entries */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-800">Transaction History</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debit</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credit</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+      <div className="bg-white rounded border border-gray-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+            <tr>
+              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Date</th>
+              <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Details</th>
+              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Debit (-)</th>
+              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Credit (+)</th>
+              <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Balance</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filteredEntries.map((entry: any) => (
+              <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-xs text-gray-500">
+                  {new Date(entry.date).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="text-sm font-medium text-gray-700">{entry.description}</div>
+                  <div className="text-[10px] text-gray-400">{entry.customerName || entry.supplierName || 'General'}</div>
+                </td>
+                <td className="px-4 py-3 text-right text-xs text-red-600">
+                  {entry.debit > 0 ? entry.debit.toLocaleString() : '-'}
+                </td>
+                <td className="px-4 py-3 text-right text-xs text-green-600">
+                  {entry.credit > 0 ? entry.credit.toLocaleString() : '-'}
+                </td>
+                <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                  {entry.balance.toLocaleString()}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {ledgerEntries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(entry.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-medium rounded ${
-                      entry.type === 'sale' ? 'bg-green-100 text-green-800' :
-                      entry.type === 'payment' ? 'bg-blue-100 text-blue-800' :
-                      entry.type === 'expense' ? 'bg-red-100 text-red-800' :
-                      entry.type === 'purchase' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {entry.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-800">{entry.description}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{entry.customerName || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-right text-red-600">
-                    {entry.debit > 0 ? `RS.${entry.debit.toFixed(2)}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right text-green-600">
-                    {entry.credit > 0 ? `RS.${entry.credit.toFixed(2)}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-right font-medium text-gray-800">
-                    RS.{entry.balance.toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-              {ledgerEntries.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                    No transactions yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
