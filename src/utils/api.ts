@@ -178,7 +178,28 @@ export const salesApi = {
     body: JSON.stringify(sale),
   }),
 }
+export const suppliersApi = {
+  getAll: () => apiRequest('/suppliers'),
+  create: (supplier: any) => apiRequest('/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(supplier),
+  }),
+  update: (id: string, updates: any) => apiRequest(`/suppliers/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  }),
+  delete: (id: string) => apiRequest(`/suppliers/${id}`, {
+    method: 'DELETE',
+  }),
+};
 
+export const purchasesApi = {
+  getAll: () => apiRequest('/purchases'),
+  create: (purchase: any) => apiRequest('/purchases', {
+    method: 'POST',
+    body: JSON.stringify(purchase),
+  }),
+};
 export const ledgerApi = {
   getAll: () => apiRequest('/ledger'),
   addEntry: (entry: any) => apiRequest('/ledger/entry', {
@@ -188,6 +209,10 @@ export const ledgerApi = {
   paymentMethod: (customerId: string, amount: number, description: string) => apiRequest('/ledger/payment', {
     method: 'POST',
     body: JSON.stringify({ customerId, amount, description }),
+  }),
+   supplierPayment: (supplierId: string, amount: number, description: string) => apiRequest('/ledger/supplier-payment', {
+    method: 'POST',
+    body: JSON.stringify({ supplierId, amount, description }),
   }),
 }
 

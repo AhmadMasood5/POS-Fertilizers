@@ -55,7 +55,7 @@ export function CustomerManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Customer Management</h2>
-          <p className="text-gray-600 mt-1">Total Receivables: ₹{totalReceivables.toFixed(2)}</p>
+          <p className="text-gray-600 mt-1">Total Receivables: RS.{totalReceivables.toFixed(2)}</p>
         </div>
         <button
           onClick={() => {
@@ -171,7 +171,7 @@ export function CustomerManagement() {
               <p className={`font-bold text-lg ${
                 customer.balance > 0 ? 'text-orange-700' : 'text-green-700'
               }`}>
-                ₹{customer.balance.toFixed(2)}
+                RS.{customer.balance.toFixed(2)}
               </p>
             </div>
           </div>

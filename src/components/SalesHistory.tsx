@@ -158,8 +158,8 @@ export function SalesHistory() {
                 <tr>
                   <td>${item.productName}</td>
                   <td>${item.quantity}</td>
-                  <td>₹${item.price.toFixed(2)}</td>
-                  <td>₹${item.total.toFixed(2)}</td>
+                  <td>RS.${item.price.toFixed(2)}</td>
+                  <td>RS.${item.total.toFixed(2)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -170,26 +170,26 @@ export function SalesHistory() {
           <table>
             <tr>
               <td>Subtotal:</td>
-              <td style="text-align: right">₹${sale.subtotal.toFixed(2)}</td>
+              <td style="text-align: right">RS.${sale.subtotal.toFixed(2)}</td>
             </tr>
             ${sale.discount > 0 ? `
             <tr>
               <td>Discount:</td>
-              <td style="text-align: right">-₹${sale.discount.toFixed(2)}</td>
+              <td style="text-align: right">-RS.${sale.discount.toFixed(2)}</td>
             </tr>
             ` : ''}
             <tr class="total-row">
               <td>Total:</td>
-              <td style="text-align: right">₹${sale.total.toFixed(2)}</td>
+              <td style="text-align: right">RS.${sale.total.toFixed(2)}</td>
             </tr>
             <tr>
               <td>Amount Paid:</td>
-              <td style="text-align: right">₹${sale.amountPaid.toFixed(2)}</td>
+              <td style="text-align: right">RS.${sale.amountPaid.toFixed(2)}</td>
             </tr>
             ${sale.balance > 0 ? `
             <tr>
               <td>Balance Due:</td>
-              <td style="text-align: right">₹${sale.balance.toFixed(2)}</td>
+              <td style="text-align: right">RS.${sale.balance.toFixed(2)}</td>
             </tr>
             ` : ''}
           </table>
@@ -282,7 +282,7 @@ export function SalesHistory() {
                     <td className="px-6 py-4 text-sm text-gray-800">{sale.customerName}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{sale.items.length}</td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                      ₹{sale.total.toFixed(2)}
+                      RS.{sale.total.toFixed(2)}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -346,10 +346,10 @@ export function SalesHistory() {
                       <div>
                         <p className="text-gray-800">{item.productName}</p>
                         <p className="text-gray-500">
-                          {item.quantity} × ₹{item.price.toFixed(2)}
+                          {item.quantity} × RS.{item.price.toFixed(2)}
                         </p>
                       </div>
-                      <p className="font-medium text-gray-800">₹{item.total.toFixed(2)}</p>
+                      <p className="font-medium text-gray-800">RS.{item.total.toFixed(2)}</p>
                     </div>
                   ))}
                 </div>
@@ -359,32 +359,32 @@ export function SalesHistory() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal:</span>
                   <span className="font-medium text-gray-800">
-                    ₹{selectedSaleDetails.subtotal.toFixed(2)}
+                    RS.{selectedSaleDetails.subtotal.toFixed(2)}
                   </span>
                 </div>
                 {selectedSaleDetails.discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount:</span>
                     <span className="font-medium text-gray-800">
-                      -₹{selectedSaleDetails.discount.toFixed(2)}
+                      -RS.{selectedSaleDetails.discount.toFixed(2)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span className="text-green-700">₹{selectedSaleDetails.total.toFixed(2)}</span>
+                  <span className="text-green-700">RS.{selectedSaleDetails.total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Amount Paid:</span>
                   <span className="font-medium text-gray-800">
-                    ₹{selectedSaleDetails.amountPaid.toFixed(2)}
+                    RS.{selectedSaleDetails.amountPaid.toFixed(2)}
                   </span>
                 </div>
                 {selectedSaleDetails.balance > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Balance Due:</span>
                     <span className="font-medium text-orange-700">
-                      ₹{selectedSaleDetails.balance.toFixed(2)}
+                      RS.{selectedSaleDetails.balance.toFixed(2)}
                     </span>
                   </div>
                 )}

@@ -34,7 +34,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Today's Sales</p>
-              <p className="text-2xl font-bold text-gray-800">₹{todayRevenue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-800">RS.{todayRevenue.toFixed(2)}</p>
               <p className="text-sm text-gray-600 mt-1">{todaySales.length} transactions</p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
@@ -47,7 +47,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-500 text-sm">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">₹{totalRevenue.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-800">RS.{totalRevenue.toFixed(2)}</p>
               <p className="text-sm text-gray-600 mt-1">{sales.length} total sales</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
@@ -74,7 +74,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <div>
               <p className="text-gray-500 text-sm">Customers</p>
               <p className="text-2xl font-bold text-gray-800">{customers.length}</p>
-              <p className="text-sm text-gray-600 mt-1">₹{totalReceivables.toFixed(2)} pending</p>
+              <p className="text-sm text-gray-600 mt-1">RS.{totalReceivables.toFixed(2)} pending</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-full">
               <Users className="text-orange-600" size={24} />
@@ -125,7 +125,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-800">₹{sale.total.toFixed(2)}</p>
+                  <p className="font-semibold text-gray-800">RS.{sale.total.toFixed(2)}</p>
                   <p className="text-xs text-gray-500">{sale.paymentMethod}</p>
                 </div>
               </div>
@@ -147,11 +147,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="space-y-3">
             <div className="flex justify-between items-center p-3 bg-green-50 rounded">
               <span className="text-gray-700">Current Balance</span>
-              <span className="font-bold text-green-700">₹{currentBalance.toFixed(2)}</span>
+              <span className="font-bold text-green-700">RS.{currentBalance.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
               <span className="text-gray-700">Accounts Receivable</span>
-              <span className="font-bold text-orange-700">₹{totalReceivables.toFixed(2)}</span>
+              <span className="font-bold text-orange-700">RS.{totalReceivables.toFixed(2)}</span>
             </div>
             <div className="mt-4 space-y-2">
               <p className="text-sm font-medium text-gray-700">Recent Transactions:</p>
@@ -159,7 +159,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 <div key={entry.id} className="flex justify-between text-sm border-b pb-2">
                   <span className="text-gray-600">{entry.description}</span>
                   <span className={entry.credit > 0 ? 'text-green-600' : 'text-red-600'}>
-                    {entry.credit > 0 ? '+' : '-'}₹{(entry.credit || entry.debit).toFixed(2)}
+                    {entry.credit > 0 ? '+' : '-'}RS.{(entry.credit || entry.debit).toFixed(2)}
                   </span>
                 </div>
               ))}
