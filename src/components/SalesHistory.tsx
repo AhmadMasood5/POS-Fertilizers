@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from './AppContext';
-import { Search, FileText, Printer, Calendar } from 'lucide-react';
+import { Search, FileText, Printer, Calendar, User } from 'lucide-react';
 
 export function SalesHistory() {
   const { sales } = useApp();
@@ -9,33 +9,30 @@ export function SalesHistory() {
   const [endDate, setEndDate] = useState('');
   const [selectedSale, setSelectedSale] = useState<string | null>(null);
 
-  const filteredSales = sales.filter(sale => {
-    // Text search
-    const matchesSearch = sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sale.id.includes(searchTerm);
+  // Filter logic using type casting to avoid 'soldBy' property errors
+  const filteredSales = (sales as any[]).filter(sale => {
+    const matchesSearch = 
+      sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sale.id.includes(searchTerm) ||
+      (sale.soldBy?.toLowerCase().includes(searchTerm.toLowerCase())); 
     
-    // Date range filter
     let matchesDate = true;
     if (startDate || endDate) {
       const saleDate = new Date(sale.date);
-      if (startDate && saleDate < new Date(startDate)) {
-        matchesDate = false;
-      }
+      if (startDate && saleDate < new Date(startDate)) matchesDate = false;
       if (endDate) {
         const endDateTime = new Date(endDate);
-        endDateTime.setHours(23, 59, 59, 999); // Include the entire end date
-        if (saleDate > endDateTime) {
-          matchesDate = false;
-        }
+        endDateTime.setHours(23, 59, 59, 999);
+        if (saleDate > endDateTime) matchesDate = false;
       }
     }
-    
     return matchesSearch && matchesDate;
   });
 
-  const selectedSaleDetails = sales.find(s => s.id === selectedSale);
+  const selectedSaleDetails = (sales as any[]).find(s => s.id === selectedSale);
 
-  const printReceipt = (sale: typeof selectedSaleDetails) => {
+  // Restored printReceipt Function
+  const printReceipt = (sale: any) => {
     if (!sale) return;
 
     const printWindow = window.open('', '', 'height=600,width=800');
@@ -50,163 +47,58 @@ export function SalesHistory() {
       <head>
         <title>Receipt #${sale.id.slice(-6)}</title>
         <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            color: #333;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-          }
-          .header p {
-            margin: 5px 0;
-            font-size: 14px;
-          }
-          .receipt-info {
-            margin-bottom: 20px;
-          }
-          .receipt-info table {
-            width: 100%;
-          }
-          .receipt-info td {
-            padding: 5px 0;
-          }
-          .items {
-            margin: 20px 0;
-          }
-          .items table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .items th {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-          }
-          .items td {
-            border: 1px solid #ddd;
-            padding: 8px;
-          }
-          .total-section {
-            margin-top: 20px;
-            float: right;
-            width: 300px;
-          }
-          .total-section table {
-            width: 100%;
-          }
-          .total-section td {
-            padding: 5px 0;
-          }
-          .total-row {
-            font-weight: bold;
-            font-size: 18px;
-            border-top: 2px solid #333;
-          }
-          .footer {
-            margin-top: 60px;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            clear: both;
-          }
-          @media print {
-            body {
-              margin: 0;
-            }
-          }
+          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .receipt-info { margin: 20px 0; width: 100%; border-collapse: collapse; }
+          .items { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          .items th { background: #f5f5f5; border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+          .items td { border: 1px solid #ddd; padding: 8px; font-size: 12px; }
+          .total-section { float: right; width: 250px; margin-top: 10px; }
+          .total-row { font-weight: bold; font-size: 16px; border-top: 2px solid #333; }
+          .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #666; clear: both; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>Fertilizer Shop POS</h1>
-          <p>Sales Receipt</p>
+          <h2>Sales Receipt</h2>
+          <p>Handled by: ${sale.soldBy || 'Admin'}</p>
         </div>
-        
-        <div class="receipt-info">
-          <table>
-            <tr>
-              <td><strong>Receipt #:</strong> ${sale.id.slice(-6)}</td>
-              <td style="text-align: right"><strong>Date:</strong> ${new Date(sale.date).toLocaleDateString()}</td>
-            </tr>
-            <tr>
-              <td colspan="2"><strong>Customer:</strong> ${sale.customerName}</td>
-            </tr>
-          </table>
-        </div>
-
-        <div class="items">
-          <table>
-            <thead>
+        <table class="receipt-info">
+          <tr>
+            <td><strong>Invoice:</strong> #${sale.id.slice(-6)}</td>
+            <td style="text-align:right"><strong>Date:</strong> ${new Date(sale.date).toLocaleDateString()}</td>
+          </tr>
+          <tr>
+            <td colspan="2"><strong>Customer:</strong> ${sale.customerName}</td>
+          </tr>
+        </table>
+        <table class="items">
+          <thead>
+            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+          </thead>
+          <tbody>
+            ${sale.items.map((item: any) => `
               <tr>
-                <th>Item</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Total</th>
+                <td>${item.productName}</td>
+                <td>${item.quantity}</td>
+                <td>RS.${item.price.toLocaleString()}</td>
+                <td>RS.${item.total.toLocaleString()}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${sale.items.map(item => `
-                <tr>
-                  <td>${item.productName}</td>
-                  <td>${item.quantity}</td>
-                  <td>RS.${item.price.toFixed(2)}</td>
-                  <td>RS.${item.total.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-
+            `).join('')}
+          </tbody>
+        </table>
         <div class="total-section">
-          <table>
-            <tr>
-              <td>Subtotal:</td>
-              <td style="text-align: right">RS.${sale.subtotal.toFixed(2)}</td>
-            </tr>
-            ${sale.discount > 0 ? `
-            <tr>
-              <td>Discount:</td>
-              <td style="text-align: right">-RS.${sale.discount.toFixed(2)}</td>
-            </tr>
-            ` : ''}
+          <table style="width:100%">
             <tr class="total-row">
-              <td>Total:</td>
-              <td style="text-align: right">RS.${sale.total.toFixed(2)}</td>
+              <td>Grand Total:</td>
+              <td style="text-align:right">RS.${sale.total.toLocaleString()}</td>
             </tr>
-            <tr>
-              <td>Amount Paid:</td>
-              <td style="text-align: right">RS.${sale.amountPaid.toFixed(2)}</td>
-            </tr>
-            ${sale.balance > 0 ? `
-            <tr>
-              <td>Balance Due:</td>
-              <td style="text-align: right">RS.${sale.balance.toFixed(2)}</td>
-            </tr>
-            ` : ''}
           </table>
         </div>
-
         <div class="footer">
-          <p>Payment Method: ${sale.paymentMethod.toUpperCase()}</p>
           <p>Thank you for your business!</p>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            // Close window after printing (optional)
-            // window.onafterprint = function() { window.close(); };
-          }
-        </script>
+        <script>window.onload = function() { window.print(); window.close(); }</script>
       </body>
       </html>
     `;
@@ -216,194 +108,104 @@ export function SalesHistory() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Sales History</h2>
-        <div className="flex gap-3 items-center">
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Start Date"
-            />
-          </div>
-          <span className="text-gray-500">to</span>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="End Date"
-            />
+        <h2 className="text-xl font-medium text-gray-800">Sales History</h2>
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+            <Calendar size={14} className="text-gray-400" />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none" />
+            <span className="text-gray-300 text-[11px]">to</span>
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-[11px] outline-none" />
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search by customer or invoice..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 w-80"
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Search customer, invoice, staff..." 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+              className="pl-8 pr-3 py-1.5 border border-gray-200 rounded text-xs outline-none w-64 focus:border-green-500" 
             />
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales List */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+        <div className="lg:col-span-2 bg-white rounded border border-gray-200 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase">Invoice</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase">Date</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase">Customer</th>
+                <th className="px-4 py-2 text-[10px] font-bold uppercase text-blue-600">Sold By</th>
+                <th className="px-4 py-2 text-right text-[10px] font-bold uppercase">Total</th>
+                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredSales.map((sale) => (
+                <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 text-xs font-medium text-gray-700">#{sale.id.slice(-6)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(sale.date).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-xs text-gray-700">{sale.customerName}</td>
+                  <td className="px-4 py-3 text-xs font-medium text-blue-600 italic">{sale.soldBy || 'Admin'}</td>
+                  <td className="px-4 py-3 text-right text-xs font-semibold">RS. {sale.total.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button onClick={() => setSelectedSale(sale.id)} className="p-1 text-gray-400 hover:text-green-600">
+                        <FileText size={16} />
+                      </button>
+                      <button onClick={() => printReceipt(sale)} className="p-1 text-gray-400 hover:text-blue-600">
+                        <Printer size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                      #{sale.id.slice(-6)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(sale.date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-800">{sale.customerName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{sale.items.length}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                      RS.{sale.total.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${
-                        sale.paymentMethod === 'cash'
-                          ? 'bg-green-100 text-green-800'
-                          : sale.balance > 0
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {sale.paymentMethod === 'cash' ? 'Cash' : sale.balance > 0 ? 'Partial' : 'Credit Paid'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setSelectedSale(sale.id)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <FileText size={18} />
-                      </button>
-                      <button
-                        onClick={() => printReceipt(sale)}
-                        className="text-blue-600 hover:text-blue-700 ml-2"
-                      >
-                        <Printer size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredSales.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No sales found' : 'No sales yet'}
-              </div>
-            )}
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Invoice Details */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded border border-gray-200 p-4 shadow-sm h-fit">
           {selectedSaleDetails ? (
             <div className="space-y-4">
-              <div className="border-b pb-4">
-                <h3 className="font-semibold text-gray-800 mb-2">Invoice Details</h3>
-                <p className="text-sm text-gray-600">Invoice #: {selectedSaleDetails.id.slice(-6)}</p>
-                <p className="text-sm text-gray-600">
-                  Date: {new Date(selectedSaleDetails.date).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div className="border-b pb-4">
-                <h4 className="font-medium text-gray-700 mb-2">Customer</h4>
-                <p className="text-sm text-gray-800">{selectedSaleDetails.customerName}</p>
-              </div>
-
-              <div className="border-b pb-4">
-                <h4 className="font-medium text-gray-700 mb-2">Items</h4>
-                <div className="space-y-2">
-                  {selectedSaleDetails.items.map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <div>
-                        <p className="text-gray-800">{item.productName}</p>
-                        <p className="text-gray-500">
-                          {item.quantity} × RS.{item.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <p className="font-medium text-gray-800">RS.{item.total.toFixed(2)}</p>
-                    </div>
-                  ))}
+              <div className="flex justify-between items-start border-b border-dashed pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800">Invoice Details</h3>
+                  <p className="text-[10px] text-gray-400">ID: {selectedSaleDetails.id}</p>
+                </div>
+                <div className="bg-blue-50 px-2 py-1 rounded flex items-center gap-1">
+                  <User size={10} className="text-blue-600" />
+                  <span className="text-[10px] font-bold text-blue-700 uppercase">{selectedSaleDetails.soldBy || 'Admin'}</span>
                 </div>
               </div>
-
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium text-gray-800">
-                    RS.{selectedSaleDetails.subtotal.toFixed(2)}
-                  </span>
-                </div>
-                {selectedSaleDetails.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount:</span>
-                    <span className="font-medium text-gray-800">
-                      -RS.{selectedSaleDetails.discount.toFixed(2)}
-                    </span>
+                {selectedSaleDetails.items.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between text-xs">
+                    <span className="text-gray-600">{item.productName} (x{item.quantity})</span>
+                    <span className="font-medium">RS. {item.total.toLocaleString()}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
-                  <span className="text-green-700">RS.{selectedSaleDetails.total.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Amount Paid:</span>
-                  <span className="font-medium text-gray-800">
-                    RS.{selectedSaleDetails.amountPaid.toFixed(2)}
-                  </span>
-                </div>
-                {selectedSaleDetails.balance > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Balance Due:</span>
-                    <span className="font-medium text-orange-700">
-                      RS.{selectedSaleDetails.balance.toFixed(2)}
-                    </span>
-                  </div>
-                )}
+                ))}
               </div>
-
-              <div className="pt-4 border-t">
-                <span className={`px-3 py-1 text-sm font-medium rounded ${
-                  selectedSaleDetails.paymentMethod === 'cash'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  Payment: {selectedSaleDetails.paymentMethod.toUpperCase()}
-                </span>
+              <div className="border-t pt-3 space-y-1">
+                <div className="flex justify-between text-sm font-bold text-green-700">
+                  <span>Grand Total:</span>
+                  <span>RS. {selectedSaleDetails.total.toLocaleString()}</span>
+                </div>
+                <button 
+                  onClick={() => printReceipt(selectedSaleDetails)}
+                  className="w-full mt-3 bg-gray-800 text-white py-2 rounded text-xs font-medium flex items-center justify-center gap-2 hover:bg-black transition-colors"
+                >
+                  <Printer size={14} /> Print Receipt
+                </button>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="mx-auto mb-2 text-gray-400" size={48} />
-              <p>Select a sale to view details</p>
+            <div className="text-center py-10">
+              <FileText className="mx-auto text-gray-200 mb-2" size={32} />
+              <p className="text-xs text-gray-400 font-medium">Select a sale to view invoice</p>
             </div>
           )}
         </div>

@@ -68,6 +68,7 @@ export interface Sale {
   paymentMethod: 'cash' | 'credit';
   amountPaid: number;
   balance: number;
+  soldBy?: string;
 }
 
 export interface LedgerEntry {

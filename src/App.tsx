@@ -8,45 +8,64 @@ import { SalesHistory } from './components/SalesHistory';
 import { CustomerManagement } from './components/CustomerManagement';
 import { AdminPanel } from './components/AdminPanel';
 import { UserManagement } from './components/UserManagement';
+import { SupplierManagement } from './components/SupplierManagement';
+import { PurchaseManagement } from './components/PurchaseManagement'; 
 import { AppProvider, useApp } from './components/AppContext';
 import { authApi, setAccessToken } from './utils/api';
 import { getSupabaseClient } from './utils/supabase/client';
-import { LogOut, Shield, Users as UsersIcon, Store } from 'lucide-react';
+import { 
+  LogOut, 
+  Shield, 
+  Users as UsersIcon, 
+  Store, 
+  Truck, 
+  ShoppingBag, 
+  ShoppingCart, 
+  Package, 
+  LayoutDashboard, 
+  History, 
+  BookOpen 
+} from 'lucide-react';
 
-type View = 'dashboard' | 'pos' | 'inventory' | 'ledger' | 'sales' | 'customers' | 'admin' | 'users';
+// View type definition
+type View = 'dashboard' | 'pos' | 'inventory' | 'ledger' | 'sales' | 'customers' | 'admin' | 'users' | 'suppliers' | 'purchases';
 
 interface MainAppProps {
   handleSignOut: () => void;
 }
 
+/**
+ * Main Application Layout
+ * Handles Navigation and Role-based View Rendering
+ */
 function MainApp({ handleSignOut }: MainAppProps) {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  
+  const { shop } = useApp();
+
   const handleNavigate = (view: string) => {
     setCurrentView(view as View);
   };
-  const { shop } = useApp();
-
 
   const isSuperAdmin = shop?.role === 'super_admin';
   const isAdmin = shop?.role === 'admin';
   const isManager = shop?.role === 'manager';
   const isSalesman = shop?.role === 'salesman';
 
-  // Super admin should only see admin panel
+  // Navigation Menu Configuration - Refined for compact look
   const menuItems = isSuperAdmin ? [
-    { id: 'admin', label: 'Shop Management', icon: <Shield size={20} />, show: true },
+    { id: 'admin', label: 'Platform Management', icon: <Shield size={18} />, show: true },
   ] : [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', show: true },
-    { id: 'pos', label: 'POS', icon: '🛒', show: true },
-    { id: 'inventory', label: 'Inventory', icon: '📦', show: isAdmin || isManager },
-    { id: 'ledger', label: 'Ledger', icon: '💰', show: isAdmin || isManager },
-    { id: 'sales', label: 'Sales', icon: '📜', show: true },
-    { id: 'customers', label: 'Customers', icon: '👥', show: true },
-    { id: 'users', label: 'Team', icon: <UsersIcon size={20} />, show: isAdmin },
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, show: true },
+    { id: 'pos', label: 'POS (Sales)', icon: <ShoppingCart size={18} />, show: true },
+    { id: 'purchases', label: 'Add Stock', icon: <ShoppingBag size={18} />, show: isAdmin || isManager },
+    { id: 'inventory', label: 'Inventory', icon: <Package size={18} />, show: isAdmin || isManager },
+    { id: 'suppliers', label: 'Suppliers', icon: <Truck size={18} />, show: isAdmin || isManager },
+    { id: 'ledger', label: 'Ledger', icon: <BookOpen size={18} />, show: isAdmin || isManager },
+    { id: 'sales', label: 'Sales History', icon: <History size={18} />, show: true },
+    { id: 'customers', label: 'Customers', icon: <UsersIcon size={18} />, show: true },
+    { id: 'users', label: 'Team', icon: <UsersIcon size={18} />, show: isAdmin },
   ];
 
-  // Auto-redirect super admin to admin panel
   useEffect(() => {
     if (isSuperAdmin && currentView !== 'admin') {
       setCurrentView('admin');
@@ -54,33 +73,33 @@ function MainApp({ handleSignOut }: MainAppProps) {
   }, [isSuperAdmin, currentView]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-600 p-2 rounded-lg">
-                <Store className="text-white" size={24} />
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      {/* Top Navigation Bar - Reduced Height */}
+      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between items-center h-14">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-green-600 p-1.5 rounded shadow-sm">
+                <Store className="text-white" size={20} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  {isSuperAdmin ? 'Fertilizer POS - SaaS Platform' : (shop?.shopName || 'Fertilizer POS')}
+                <h1 className="text-base font-semibold text-gray-800 leading-tight">
+                  {isSuperAdmin ? 'Platform Control' : (shop?.shopName || 'Fertilizer POS')}
                 </h1>
-                <p className="text-xs text-gray-500">
-                  {isSuperAdmin && <span className="text-purple-600 font-medium">Platform Admin</span>}
-                  {isAdmin && !isSuperAdmin && <span className="text-blue-600 font-medium">Shop Owner</span>}
-                  {isManager && <span className="text-green-600 font-medium">Manager</span>}
-                  {isSalesman && <span className="text-yellow-600 font-medium">Salesman</span>}
+                <p className="text-[10px] font-medium tracking-wide">
+                  {isSuperAdmin && <span className="text-purple-600 uppercase">Super Admin</span>}
+                  {isAdmin && !isSuperAdmin && <span className="text-blue-600 uppercase">Shop Owner</span>}
+                  {isManager && <span className="text-green-600 uppercase">Manager</span>}
+                  {isSalesman && <span className="text-yellow-600 uppercase">Salesman</span>}
                 </p>
               </div>
             </div>
             
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded text-sm font-medium transition-all"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
               <span>Sign Out</span>
             </button>
           </div>
@@ -88,36 +107,35 @@ function MainApp({ handleSignOut }: MainAppProps) {
       </nav>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 overflow-x-auto">
-          <div className="flex gap-2 p-2">
+      <div className="max-w-7xl mx-auto px-4 py-4 flex-grow w-full">
+        
+        {/* Compact Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-x-auto border border-gray-200">
+          <div className="flex gap-1 p-1 min-w-max">
             {menuItems.filter(item => item.show).map((item) => (
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id as View)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
                   currentView === item.id
-                    ? 'bg-green-600 text-white shadow-md'
-                    : 'text-gray-700 hover:bg-gray-100'
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                {typeof item.icon === 'string' ? (
-                  <span className="text-lg">{item.icon}</span>
-                ) : (
-                  item.icon
-                )}
+                {item.icon}
                 <span>{item.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* View Content */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* Dynamic Component Rendering Container */}
+        <div className="bg-white rounded-lg shadow-sm p-5 min-h-[550px] border border-gray-200">
           {currentView === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
           {currentView === 'pos' && <POSInterface />}
+          {currentView === 'purchases' && <PurchaseManagement />}
           {currentView === 'inventory' && <InventoryManagement />}
+          {currentView === 'suppliers' && <SupplierManagement />}
           {currentView === 'ledger' && <LedgerManagement />}
           {currentView === 'sales' && <SalesHistory />}
           {currentView === 'customers' && <CustomerManagement />}
@@ -129,6 +147,10 @@ function MainApp({ handleSignOut }: MainAppProps) {
   );
 }
 
+/**
+ * Entry Point Component
+ * Handles Authentication, Session Management, and Context Providers
+ */
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,16 +168,35 @@ export default function App() {
     }
   };
 
+  const checkSession = async () => {
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+      
+      if (supabaseSession) {
+        setAccessToken(supabaseSession.access_token);
+        const result = await authApi.getSession();
+        if (result.shop) {
+          setSession(result);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (error) {
+      console.error('Session check failed:', error);
+      const supabase = getSupabaseClient();
+      await supabase.auth.signOut();
+      setAccessToken(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     checkSession();
     
-    // Listen for auth state changes
     const supabase = getSupabaseClient();
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
-      console.log('Auth state changed:', event, supabaseSession);
-      
       if (event === 'SIGNED_IN' && supabaseSession) {
-        // Get shop data
         const result = await authApi.getSession();
         if (result.shop) {
           setSession(result);
@@ -166,7 +207,6 @@ export default function App() {
         setIsAuthenticated(false);
         setAccessToken(null);
       } else if (event === 'TOKEN_REFRESHED' && supabaseSession) {
-        console.log('Token refreshed successfully');
         setAccessToken(supabaseSession.access_token);
       }
     });
@@ -176,69 +216,24 @@ export default function App() {
     };
   }, []);
 
-  const checkSession = async () => {
-    try {
-      console.log('Checking session...');
-      const supabase = getSupabaseClient();
-      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
-      
-      if (supabaseSession) {
-        console.log('Supabase session found:', supabaseSession.user.email);
-        setAccessToken(supabaseSession.access_token);
-        
-        // Get shop data from backend
-        const result = await authApi.getSession();
-        console.log('Session result:', result);
-        
-        if (result.shop) {
-          setSession(result);
-          setIsAuthenticated(true);
-          console.log('Session authenticated successfully', result.shop);
-        } else {
-          console.log('Session exists but no shop data');
-        }
-      } else {
-        console.log('No Supabase session found');
-      }
-    } catch (error) {
-      console.error('Session check failed:', error);
-      // Clear invalid session
-      const supabase = getSupabaseClient();
-      await supabase.auth.signOut();
-      setAccessToken(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleAuthSuccess = (sessionData: any) => {
-  console.log('🔐 handleAuthSuccess called with:', sessionData);
-  
-  if (!sessionData.shop) {
-    // User authenticated but no shop (pending approval)
-    alert('Your account is pending admin approval. Please wait for approval.');
-    return;
-  }
-  
-  // CRITICAL: Store the access token!
-  if (sessionData.accessToken) {
-    console.log('✅ Setting access token');
-    setAccessToken(sessionData.accessToken);
-  } else {
-    console.error('❌ No accessToken in session data!');
-  }
-  
-  setSession(sessionData);
-  setIsAuthenticated(true);
-  console.log('✅ Authentication successful');
-};
+    if (!sessionData.shop) {
+      alert('Your account is pending admin approval.');
+      return;
+    }
+    if (sessionData.accessToken) {
+      setAccessToken(sessionData.accessToken);
+    }
+    setSession(sessionData);
+    setIsAuthenticated(true);
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-500 text-sm font-medium">Synchronizing session...</p>
         </div>
       </div>
     );
