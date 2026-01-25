@@ -9,14 +9,15 @@ import { CustomerManagement } from './components/CustomerManagement';
 import { AdminPanel } from './components/AdminPanel';
 import { UserManagement } from './components/UserManagement';
 import { SupplierManagement } from './components/SupplierManagement';
-import { PurchaseManagement } from './components/PurchaseManagement'; 
+import { PurchaseManagement } from './components/PurchaseManagement';
+import { ReportsAnalytics } from './components/ReportsAnalytics';
 import { AppProvider, useApp } from './components/AppContext';
 import { authApi, setAccessToken } from './utils/api';
 import { getSupabaseClient } from './utils/supabase/client';
 import { 
   LogOut, 
   Shield, 
-  Users as UsersIcon, 
+  Users, 
   Store, 
   Truck, 
   ShoppingBag, 
@@ -24,21 +25,24 @@ import {
   Package, 
   LayoutDashboard, 
   History, 
-  BookOpen 
+  BookOpen,
+  FileText
 } from 'lucide-react';
 
 // View type definition
-type View = 'dashboard' | 'pos' | 'inventory' | 'ledger' | 'sales' | 'customers' | 'admin' | 'users' | 'suppliers' | 'purchases';
+type View = 'dashboard' | 'pos' | 'inventory' | 'ledger' | 'sales' | 'customers' | 'admin' | 'users' | 'suppliers' | 'purchases' | 'reports';
 
 interface MainAppProps {
   handleSignOut: () => void;
+  userEmail: string;
+  userName: string;
 }
 
 /**
  * Main Application Layout
  * Handles Navigation and Role-based View Rendering
  */
-function MainApp({ handleSignOut }: MainAppProps) {
+function MainApp({ handleSignOut, userEmail, userName }: MainAppProps) {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const { shop } = useApp();
 
@@ -53,17 +57,18 @@ function MainApp({ handleSignOut }: MainAppProps) {
 
   // Navigation Menu Configuration - Refined for compact look
   const menuItems = isSuperAdmin ? [
-    { id: 'admin', label: 'Platform Management', icon: <Shield size={18} />, show: true },
+    { id: 'admin', label: 'Platform', icon: <Shield size={16} />, show: true },
   ] : [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} />, show: true },
-    { id: 'pos', label: 'POS (Sales)', icon: <ShoppingCart size={18} />, show: true },
-    { id: 'purchases', label: 'Add Stock', icon: <ShoppingBag size={18} />, show: isAdmin || isManager },
-    { id: 'inventory', label: 'Inventory', icon: <Package size={18} />, show: isAdmin || isManager },
-    { id: 'suppliers', label: 'Suppliers', icon: <Truck size={18} />, show: isAdmin || isManager },
-    { id: 'ledger', label: 'Ledger', icon: <BookOpen size={18} />, show: isAdmin || isManager },
-    { id: 'sales', label: 'Sales History', icon: <History size={18} />, show: true },
-    { id: 'customers', label: 'Customers', icon: <UsersIcon size={18} />, show: true },
-    { id: 'users', label: 'Team', icon: <UsersIcon size={18} />, show: isAdmin },
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} />, show: true },
+    { id: 'pos', label: 'Sales', icon: <ShoppingCart size={16} />, show: true },
+    { id: 'purchases', label: 'Stock', icon: <ShoppingBag size={16} />, show: isAdmin || isManager },
+    { id: 'inventory', label: 'Inventory', icon: <Package size={16} />, show: isAdmin || isManager },
+    { id: 'suppliers', label: 'Suppliers', icon: <Truck size={16} />, show: isAdmin || isManager },
+    { id: 'reports', label: 'Reports', icon: <FileText size={16} />, show: isAdmin || isManager },
+    { id: 'ledger', label: 'Ledger', icon: <BookOpen size={16} />, show: isAdmin || isManager },
+    { id: 'sales', label: 'History', icon: <History size={16} />, show: true },
+    { id: 'customers', label: 'Customers', icon: <Users size={16} />, show: true },
+    { id: 'users', label: 'Team', icon: <Users size={16} />, show: isAdmin },
   ];
 
   useEffect(() => {
@@ -83,15 +88,34 @@ function MainApp({ handleSignOut }: MainAppProps) {
                 <Store className="text-white" size={20} />
               </div>
               <div>
-                <h1 className="text-base font-semibold text-gray-800 leading-tight">
-                  {isSuperAdmin ? 'Platform Control' : (shop?.shopName || 'Fertilizer POS')}
+                {/* DYNAMIC NAME & EMAIL: Show the logged-in user's info */}
+                <h1 className="text-sm font-bold text-gray-800 leading-tight">
+                  {isSuperAdmin ? 'Platform Control' : (userName || userEmail || 'User Account')}
                 </h1>
-                <p className="text-[10px] font-medium tracking-wide">
-                  {isSuperAdmin && <span className="text-purple-600 uppercase">Super Admin</span>}
-                  {isAdmin && !isSuperAdmin && <span className="text-blue-600 uppercase">Shop Owner</span>}
-                  {isManager && <span className="text-green-600 uppercase">Manager</span>}
-                  {isSalesman && <span className="text-yellow-600 uppercase">Salesman</span>}
-                </p>
+                
+                <div className="flex items-center gap-2">
+                  {/* USER EMAIL: Show as sub-label if name is displayed */}
+                  {!isSuperAdmin && userName && (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {userEmail}
+                    </span>
+                  )}
+                  
+                  {/* SHOP NAME */}
+                  {!isSuperAdmin && (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {userName && '•'} {shop?.shopName}
+                    </span>
+                  )}
+                  
+                  {/* ROLE BADGE */}
+                  <p className="text-[10px] font-bold tracking-wide">
+                    {isSuperAdmin && <span className="text-purple-600 uppercase">Super Admin</span>}
+                    {isAdmin && !isSuperAdmin && <span className="text-blue-600 uppercase">Shop Owner</span>}
+                    {isManager && <span className="text-green-600 uppercase">Manager</span>}
+                    {isSalesman && <span className="text-yellow-600 uppercase">Salesman</span>}
+                  </p>
+                </div>
               </div>
             </div>
             
@@ -110,20 +134,20 @@ function MainApp({ handleSignOut }: MainAppProps) {
       <div className="max-w-7xl mx-auto px-4 py-4 flex-grow w-full">
         
         {/* Compact Tab Navigation */}
-        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-x-auto border border-gray-200">
-          <div className="flex gap-1 p-1 min-w-max">
+        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-x-auto border border-gray-200 scrollbar-hide">
+          <div className="flex gap-0.5 p-1 min-w-max">
             {menuItems.filter(item => item.show).map((item) => (
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id as View)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap ${
                   currentView === item.id
                     ? 'bg-green-600 text-white shadow-sm'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="hidden sm:inline">{item.label}</span>
               </button>
             ))}
           </div>
@@ -136,6 +160,7 @@ function MainApp({ handleSignOut }: MainAppProps) {
           {currentView === 'purchases' && <PurchaseManagement />}
           {currentView === 'inventory' && <InventoryManagement />}
           {currentView === 'suppliers' && <SupplierManagement />}
+          {currentView === 'reports' && <ReportsAnalytics />}
           {currentView === 'ledger' && <LedgerManagement />}
           {currentView === 'sales' && <SalesHistory />}
           {currentView === 'customers' && <CustomerManagement />}
@@ -155,6 +180,8 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
 
   const handleSignOut = async () => {
     try {
@@ -163,6 +190,8 @@ export default function App() {
       setSession(null);
       setIsAuthenticated(false);
       setAccessToken(null);
+      setUserEmail('');
+      setUserName('');
     } catch (error) {
       console.error('Sign out failed:', error);
     }
@@ -175,8 +204,16 @@ export default function App() {
       
       if (supabaseSession) {
         setAccessToken(supabaseSession.access_token);
+        setUserEmail(supabaseSession.user.email || '');
+        console.log('✅ User email from session:', supabaseSession.user.email);
+        
         const result = await authApi.getSession();
         if (result.shop) {
+          // Get user name: for team members use teamMemberName, for shop owner use ownerName
+          const name = result.shop.teamMemberName || result.shop.ownerName || '';
+          setUserName(name);
+          console.log('✅ User name from session:', name);
+          
           setSession(result);
           setIsAuthenticated(true);
         }
@@ -195,10 +232,17 @@ export default function App() {
     checkSession();
     
     const supabase = getSupabaseClient();
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event: string, supabaseSession: any) => {
       if (event === 'SIGNED_IN' && supabaseSession) {
+        setUserEmail(supabaseSession.user.email || '');
+        console.log('✅ User signed in:', supabaseSession.user.email);
+        
         const result = await authApi.getSession();
         if (result.shop) {
+          const name = result.shop.teamMemberName || result.shop.ownerName || '';
+          setUserName(name);
+          console.log('✅ User name:', name);
+          
           setSession(result);
           setIsAuthenticated(true);
         }
@@ -206,8 +250,11 @@ export default function App() {
         setSession(null);
         setIsAuthenticated(false);
         setAccessToken(null);
+        setUserEmail('');
+        setUserName('');
       } else if (event === 'TOKEN_REFRESHED' && supabaseSession) {
         setAccessToken(supabaseSession.access_token);
+        setUserEmail(supabaseSession.user.email || '');
       }
     });
 
@@ -217,6 +264,10 @@ export default function App() {
   }, []);
 
   const handleAuthSuccess = (sessionData: any) => {
+    console.log('=== AUTH SUCCESS ===');
+    console.log('Session data:', sessionData);
+    console.log('User:', sessionData.user);
+    
     if (!sessionData.shop) {
       alert('Your account is pending admin approval.');
       return;
@@ -224,6 +275,16 @@ export default function App() {
     if (sessionData.accessToken) {
       setAccessToken(sessionData.accessToken);
     }
+    if (sessionData.user?.email) {
+      setUserEmail(sessionData.user.email);
+      console.log('✅ User email set:', sessionData.user.email);
+    }
+    
+    // Get user name from shop data
+    const name = sessionData.shop.teamMemberName || sessionData.shop.ownerName || '';
+    setUserName(name);
+    console.log('✅ User name set:', name);
+    
     setSession(sessionData);
     setIsAuthenticated(true);
   };
@@ -244,8 +305,13 @@ export default function App() {
   }
 
   return (
-    <AppProvider initialShop={session.shop} onSignOut={handleSignOut}>
-      <MainApp handleSignOut={handleSignOut} />
+    <AppProvider 
+      initialShop={session.shop} 
+      userName={userName}
+      userEmail={userEmail}
+      onSignOut={handleSignOut}
+    >
+      <MainApp handleSignOut={handleSignOut} userEmail={userEmail} userName={userName} />
     </AppProvider>
   );
 }

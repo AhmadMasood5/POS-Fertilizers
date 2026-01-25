@@ -10,6 +10,8 @@ export function POSInterface() {
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
   const [amountPaid, setAmountPaid] = useState(0);
+  const [editingPrice, setEditingPrice] = useState<{ [key: string]: boolean }>({});
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,6 +76,49 @@ export function POSInterface() {
     }));
   };
 
+  const setManualQuantity = (productId: string, newQty: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    if (newQty < 1) {
+      alert('Quantity must be at least 1');
+      return;
+    }
+
+    if (newQty > product.stock) {
+      alert(`Cannot add more. Only ${product.stock} ${product.unit} available in stock.`);
+      return;
+    }
+
+    setCart(cart.map(item => {
+      if (item.productId === productId) {
+        return { ...item, quantity: newQty, total: newQty * item.price };
+      }
+      return item;
+    }));
+  };
+
+  const updatePrice = (productId: string, newPrice: number) => {
+    if (newPrice < 0) {
+      alert('Price cannot be negative');
+      return;
+    }
+
+    setCart(cart.map(item => {
+      if (item.productId === productId) {
+        return { ...item, price: newPrice, total: item.quantity * newPrice };
+      }
+      return item;
+    }));
+  };
+
+  const togglePriceEdit = (productId: string) => {
+    setEditingPrice(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }));
+  };
+
   const removeFromCart = (productId: string) => {
     setCart(cart.filter(item => item.productId !== productId));
   };
@@ -110,6 +155,7 @@ export function POSInterface() {
     const paidAmount = paymentMethod === 'cash' ? total : amountPaid;
     const balance = total - paidAmount;
 
+    setIsProcessing(true);
     try {
       await addSale({
         customerId: customer.id,
@@ -129,11 +175,14 @@ export function POSInterface() {
       setDiscount(0);
       setAmountPaid(0);
       setPaymentMethod('cash');
+      setEditingPrice({});
       alert('Sale completed successfully!');
     } catch (error: any) {
       // ✅ Show backend error message
       alert(error.message || 'Failed to complete sale. Please try again.');
       console.error('Sale error:', error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -178,7 +227,7 @@ export function POSInterface() {
                   {product.stock <= 0 ? 'Out of Stock' : `${product.stock} ${product.unit}`}
                 </span>
               </div>
-              {product.stock > 0 && product.stock <= 1 && (
+              {product.stock > 0 && product.stock <= 10 && (
                 <div className="mt-2 flex items-center gap-1 text-xs text-orange-600">
                   <AlertTriangle size={12} />
                   <span>Low stock</span>
@@ -201,43 +250,90 @@ export function POSInterface() {
             {cart.map(item => {
               const product = products.find(p => p.id === item.productId);
               const hasStockIssue = product && item.quantity > product.stock;
+              const isPriceEditing = editingPrice[item.productId];
               
               return (
-                <div key={item.productId} className={`flex items-center gap-2 border-b pb-2 ${
+                <div key={item.productId} className={`border border-gray-200 rounded p-2 ${
                   hasStockIssue ? 'bg-red-50' : ''
                 }`}>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm text-gray-800">{item.productName}</p>
-                    <p className="text-xs text-gray-500">RS.{item.price} each</p>
-                    {hasStockIssue && (
-                      <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
-                        <AlertTriangle size={10} />
-                        Only {product?.stock} available
-                      </p>
+                  {/* Product Name and Remove Button */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-gray-800">{item.productName}</p>
+                      {hasStockIssue && (
+                        <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
+                          <AlertTriangle size={10} />
+                          Only {product?.stock} available
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeFromCart(item.productId)}
+                      className="p-1 hover:bg-red-50 rounded text-red-600"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  {/* Price Row with Edit Toggle */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-500">Price:</span>
+                    {isPriceEditing ? (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.price}
+                        onChange={(e) => updatePrice(item.productId, parseFloat(e.target.value) || 0)}
+                        className="flex-1 px-2 py-1 text-xs font-bold text-green-700 border border-green-300 rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                    ) : (
+                      <span className="flex-1 text-xs font-bold text-green-700">RS.{item.price.toFixed(2)}</span>
                     )}
-                  </div>
-                  <div className="flex items-center gap-1">
                     <button
-                      onClick={() => updateQuantity(item.productId, -1)}
-                      className="p-1 hover:bg-gray-100 rounded"
+                      onClick={() => togglePriceEdit(item.productId)}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        isPriceEditing 
+                          ? 'bg-green-600' 
+                          : 'bg-gray-300'
+                      }`}
                     >
-                      <Minus size={14} />
-                    </button>
-                    <span className="px-2 text-sm font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.productId, 1)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                    >
-                      <Plus size={14} />
+                      <span
+                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                          isPriceEditing ? 'translate-x-5' : 'translate-x-1'
+                        }`}
+                      />
                     </button>
                   </div>
-                  <span className="font-semibold text-sm w-16 text-right">RS.{item.total.toFixed(2)}</span>
-                  <button
-                    onClick={() => removeFromCart(item.productId)}
-                    className="p-1 hover:bg-red-50 rounded text-red-600"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+
+                  {/* Quantity and Total Row */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateQuantity(item.productId, -1)}
+                        className="p-1 hover:bg-gray-100 rounded border border-gray-200"
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const newQty = parseInt(e.target.value) || 1;
+                          setManualQuantity(item.productId, newQty);
+                        }}
+                        className="w-12 px-1 py-1 text-sm font-medium text-center border border-gray-200 rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      />
+                      <button
+                        onClick={() => updateQuantity(item.productId, 1)}
+                        className="p-1 hover:bg-gray-100 rounded border border-gray-200"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    <span className="font-bold text-sm text-gray-900">RS.{item.total.toFixed(2)}</span>
+                  </div>
                 </div>
               );
             })}
@@ -334,9 +430,24 @@ export function POSInterface() {
 
             <button
               onClick={handleCheckout}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+              disabled={isProcessing}
+              className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                isProcessing
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
-              Complete Sale
+              {isProcessing ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Processing Sale...</span>
+                </>
+              ) : (
+                'Complete Sale'
+              )}
             </button>
           </div>
         </div>

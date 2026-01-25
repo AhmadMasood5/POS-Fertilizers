@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { userApi } from '../utils/api';
-import { Plus, Edit2, Trash2, User, UserCheck, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, User, UserCheck, Users, Phone, Mail, Shield } from 'lucide-react';
 
 interface TeamUser {
   id: string;
@@ -54,11 +54,9 @@ export function UserManagement() {
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
-
     try {
       await userApi.delete(userId);
       await loadUsers();
-      alert('User deleted successfully');
     } catch (error: any) {
       alert(`Failed to delete user: ${error.message}`);
     }
@@ -68,7 +66,6 @@ export function UserManagement() {
     try {
       await userApi.updateRole(userId, newRole);
       await loadUsers();
-      alert('Role updated successfully');
     } catch (error: any) {
       alert(`Failed to update role: ${error.message}`);
     }
@@ -77,216 +74,252 @@ export function UserManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading users...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 pb-20 md:pb-0">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Team Management</h2>
-          <p className="text-gray-600 mt-1">Manage your shop's team members and their roles</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Team Management</h2>
+          <p className="text-sm text-gray-600 mt-1">Manage shop members and permissions</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors shadow-md"
+          className="w-full sm:w-auto flex justify-center items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-xl hover:bg-green-700 transition-all shadow-lg active:scale-95"
         >
           <Plus size={20} />
-          Add Team Member
+          <span>Add Member</span>
         </button>
       </div>
 
-      {/* Role Info Card */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 border-l-4 border-green-500 rounded-lg p-6 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="bg-green-500 rounded-full p-2">
-            <Users className="text-white" size={20} />
+      {/* Role Info - Scrollable on Mobile */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 md:p-6 shadow-sm overflow-hidden">
+        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Shield size={18} className="text-green-600" />
+          Role Permissions
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="font-bold text-blue-900 text-xs uppercase tracking-wider">Admin</p>
+            <p className="text-xs text-blue-700 mt-1">Full control & Team management</p>
           </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-2">👥 Role Permissions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-lg p-3 border border-blue-200">
-                <p className="font-medium text-blue-900 text-sm mb-1">🔵 Admin (You)</p>
-                <p className="text-xs text-blue-700">Full access + user management</p>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-green-200">
-                <p className="font-medium text-green-900 text-sm mb-1">🟢 Manager</p>
-                <p className="text-xs text-green-700">Products, sales, ledger, customers</p>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-yellow-200">
-                <p className="font-medium text-yellow-900 text-sm mb-1">🟡 Salesman</p>
-                <p className="text-xs text-yellow-700">Process sales & manage customers only</p>
-              </div>
-            </div>
+          <div className="p-3 bg-green-50 rounded-xl border border-green-100">
+            <p className="font-bold text-green-900 text-xs uppercase tracking-wider">Manager</p>
+            <p className="text-xs text-green-700 mt-1">Stock, Sales & Ledger access</p>
+          </div>
+          <div className="p-3 bg-yellow-50 rounded-xl border border-yellow-100">
+            <p className="font-bold text-yellow-900 text-xs uppercase tracking-wider">Salesman</p>
+            <p className="text-xs text-yellow-700 mt-1">Daily sales & Customers only</p>
           </div>
         </div>
       </div>
 
-      {/* Team Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-2xl font-bold text-blue-900">{users.length}</p>
-          <p className="text-sm text-blue-700">Total Team Members</p>
-        </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <p className="text-2xl font-bold text-purple-900">{users.filter(u => u.isOwner).length}</p>
-          <p className="text-sm text-purple-700">Admins</p>
-        </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-2xl font-bold text-green-900">{users.filter(u => u.role === 'manager').length}</p>
-          <p className="text-sm text-green-700">Managers</p>
-        </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-2xl font-bold text-yellow-900">{users.filter(u => u.role === 'salesman').length}</p>
-          <p className="text-sm text-yellow-700">Salesmen</p>
-        </div>
+      {/* Stats - Grid layout */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', count: users.length, color: 'bg-gray-50 text-gray-700' },
+          { label: 'Admins', count: users.filter(u => u.isOwner).length, color: 'bg-purple-50 text-purple-700' },
+          { label: 'Managers', count: users.filter(u => u.role === 'manager').length, color: 'bg-blue-50 text-blue-700' },
+          { label: 'Salesmen', count: users.filter(u => u.role === 'salesman').length, color: 'bg-green-50 text-green-700' },
+        ].map((stat, i) => (
+          <div key={i} className={`${stat.color} p-4 rounded-2xl border border-white/50 shadow-sm`}>
+            <p className="text-2xl font-black">{stat.count}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-80">{stat.label}</p>
+          </div>
+        ))}
       </div>
 
+      {/* Add User Form - Responsive Grid */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">Add New Team Member</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+        <div className="bg-white rounded-2xl shadow-xl border border-green-100 p-6 animate-in slide-in-from-top-4 duration-300">
+          <h3 className="font-bold text-gray-800 mb-5">Create New Member</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Login Password</label>
+                <input
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500"
+                  placeholder="Min 6 chars"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Phone (Optional)</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="md:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Assign Role</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="salesman">Salesman</option>
+                  <option value="manager">Manager</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="Minimum 6 characters"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone (Optional)</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="submit"
+                className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 shadow-md transition-all"
               >
-                <option value="salesman">Salesman</option>
-                <option value="manager">Manager</option>
-              </select>
-            </div>
-            <div className="col-span-2 flex gap-3 justify-end">
+                Create Member
+              </button>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all"
               >
                 Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Create User
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${
-                      user.isOwner ? 'bg-purple-100' : 
-                      user.role === 'manager' ? 'bg-blue-100' : 'bg-green-100'
-                    }`}>
-                      {user.isOwner ? (
-                        <UserCheck className={user.isOwner ? 'text-purple-600' : 'text-blue-600'} size={20} />
-                      ) : (
-                        <User className={user.role === 'manager' ? 'text-blue-600' : 'text-green-600'} size={20} />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">{user.name}</p>
-                      {user.isOwner && (
-                        <p className="text-xs text-purple-600">Shop Owner</p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{user.phone || '-'}</td>
-                <td className="px-6 py-4">
-                  {user.isOwner ? (
-                    <span className="px-3 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                      Admin (Owner)
-                    </span>
-                  ) : (
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                      className="px-3 py-1 text-xs font-medium border border-gray-300 rounded"
-                    >
-                      <option value="manager">Manager</option>
-                      <option value="salesman">Salesman</option>
-                    </select>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-right">
-                  {!user.isOwner && (
-                    <button
-                      onClick={() => handleDelete(user.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </td>
+      {/* Users List - Table on Desktop, Cards on Mobile */}
+      <div className="space-y-4">
+        {/* Desktop Table View */}
+        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Contact</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4 text-right">Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {users.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl ${user.isOwner ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'}`}>
+                        {user.isOwner ? <UserCheck size={20} /> : <User size={20} />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-800">{user.name}</p>
+                        {user.isOwner && <p className="text-[10px] font-bold text-purple-500 uppercase">Owner</p>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-gray-600">{user.email}</p>
+                    <p className="text-xs text-gray-400">{user.phone || 'No phone'}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    {user.isOwner ? (
+                      <span className="text-xs font-black text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase">Admin</span>
+                    ) : (
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                        className="text-xs font-bold border-gray-200 rounded-lg focus:ring-green-500"
+                      >
+                        <option value="manager">Manager</option>
+                        <option value="salesman">Salesman</option>
+                      </select>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {!user.isOwner && (
+                      <button onClick={() => handleDelete(user.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {users.map((user) => (
+            <div key={user.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-2xl ${user.isOwner ? 'bg-purple-100 text-purple-600' : 'bg-green-100 text-green-600'}`}>
+                    {user.isOwner ? <UserCheck size={24} /> : <User size={24} />}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{user.name}</h4>
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      {user.isOwner ? 'Shop Admin' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </p>
+                  </div>
+                </div>
+                {!user.isOwner && (
+                  <button onClick={() => handleDelete(user.id)} className="p-2 text-red-500 bg-red-50 rounded-xl">
+                    <Trash2 size={18} />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2 border-t border-gray-50 pt-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Mail size={14} className="text-gray-400" />
+                  {user.email}
+                </div>
+                {user.phone && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Phone size={14} className="text-gray-400" />
+                    {user.phone}
+                  </div>
+                )}
+              </div>
+
+              {!user.isOwner && (
+                <div className="pt-2">
+                   <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Change Role</label>
+                   <select
+                    value={user.role}
+                    onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                    className="w-full bg-gray-50 border-none rounded-xl font-bold text-sm py-2"
+                  >
+                    <option value="manager">Manager</option>
+                    <option value="salesman">Salesman</option>
+                  </select>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

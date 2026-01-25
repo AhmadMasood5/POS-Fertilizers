@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from './AppContext';
 import { ledgerApi } from '../utils/api'; 
-import { Plus, Search, Truck, X, Calendar, FileText, TrendingUp } from 'lucide-react';
+import { Plus, Search, Truck, X, Calendar, FileText, TrendingUp, Wallet } from 'lucide-react';
 
 export function LedgerManagement() {
   const { ledgerEntries, customers, suppliers, refreshData } = useApp();
@@ -10,16 +10,37 @@ export function LedgerManagement() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const [activeForm, setActiveForm] = useState<'customer_payment' | 'supplier_payment' | 'expense' | null>(null);
+  const [activeForm, setActiveForm] = useState<'customer_payment' | 'supplier_payment' | 'expense' | 'opening_balance' | null>(null);
+  
+  const [openingData, setOpeningData] = useState({ description: 'Initial Business Cash', amount: 0 });
   const [expenseData, setExpenseData] = useState({ description: '', amount: 0 });
   const [custPaymentData, setCustPaymentData] = useState({ customerId: '', amount: 0, description: '' });
   const [suppPaymentData, setSuppPaymentData] = useState({ supplierId: '', amount: 0, description: '' });
 
   const closeForm = () => {
     setActiveForm(null);
+    setOpeningData({ description: 'Initial Business Cash', amount: 0 });
     setExpenseData({ description: '', amount: 0 });
     setCustPaymentData({ customerId: '', amount: 0, description: '' });
     setSuppPaymentData({ supplierId: '', amount: 0, description: '' });
+  };
+
+  // --- HANDLERS ---
+  const handleOpeningSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (openingData.amount <= 0) return alert("Please enter a valid amount");
+    try {
+      await ledgerApi.addEntry({ 
+        type: 'general', 
+        description: openingData.description, 
+        debit: 0, 
+        credit: openingData.amount, 
+        date: new Date().toISOString() 
+      });
+      refreshData?.();
+      closeForm();
+      alert('Opening balance added!');
+    } catch (error) { alert('Failed to add opening balance'); }
   };
 
   const handleCustomerPayment = async (e: React.FormEvent) => {
@@ -49,6 +70,7 @@ export function LedgerManagement() {
     } catch (error) { alert('Failed to add expense'); }
   };
 
+  // --- FILTERS ---
   const filteredEntries = ledgerEntries.filter((entry: any) => {
     const matchesSearch = entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (entry.customerName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -70,137 +92,168 @@ export function LedgerManagement() {
   const currentBalance = ledgerEntries.length > 0 ? (ledgerEntries[0] as any).balance : 0;
 
   return (
-    <div className="space-y-5">
-      {/* Responsive Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-medium text-gray-800">Ledger Management</h2>
-        <div className="text-left sm:text-right">
-          <p className="text-[10px] text-gray-400 uppercase font-semibold">Total Balance</p>
-          <p className={`text-lg font-semibold ${currentBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+    <div className="space-y-5 pb-10">
+      {/* Header & Total Balance Card */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-gray-100 shadow-sm gap-4">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 tracking-tight">Ledger Management</h2>
+          <p className="text-xs text-gray-500 font-normal">Track your cash flow and balances</p>
+        </div>
+        <div className="bg-gray-50 px-6 py-2 rounded-lg border border-gray-100 text-left sm:text-right w-full sm:w-auto">
+          <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-widest">Total Cash Balance</p>
+          <p className={`text-xl font-semibold ${currentBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             RS. {currentBalance.toLocaleString()}
           </p>
         </div>
       </div>
 
-      {/* Action Buttons - Allow wrapping on small screens */}
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => setActiveForm('customer_payment')} className="bg-green-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-green-700 flex items-center gap-2">
-          <TrendingUp size={14}/> Customer Payment
+      {/* Action Buttons */}
+      <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2">
+        <button onClick={() => setActiveForm('opening_balance')} className="bg-amber-600 text-white py-2.5 px-4 rounded-lg text-xs font-semibold hover:bg-amber-700 flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+          <Wallet size={16}/> Opening Cash
         </button>
-        <button onClick={() => setActiveForm('supplier_payment')} className="bg-blue-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
-          <Truck size={14}/> Supplier Payment
+        <button onClick={() => setActiveForm('customer_payment')} className="bg-green-600 text-white py-2.5 px-4 rounded-lg text-xs font-semibold hover:bg-green-700 flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+          <TrendingUp size={16}/> Customer Payment
         </button>
-        <button onClick={() => setActiveForm('expense')} className="bg-red-600 text-white py-1.5 px-4 rounded text-sm font-medium hover:bg-red-700 flex items-center gap-2">
-          <Plus size={14}/> Shop Expense
+        <button onClick={() => setActiveForm('supplier_payment')} className="bg-blue-600 text-white py-2.5 px-4 rounded-lg text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+          <Truck size={16}/> Supplier Payment
+        </button>
+        <button onClick={() => setActiveForm('expense')} className="bg-red-600 text-white py-2.5 px-4 rounded-lg text-xs font-semibold hover:bg-red-700 flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95">
+          <Plus size={16}/> Shop Expense
         </button>
       </div>
 
+      {/* Dynamic Form Area */}
       {activeForm && (
-        <div className="bg-white p-4 rounded border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="bg-white p-5 rounded-xl border-2 border-gray-100 shadow-md animate-in fade-in zoom-in duration-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-widest flex items-center gap-2">
+              <Plus size={16} className="text-blue-500" />
               {activeForm.replace('_', ' ')}
             </h3>
-            <button onClick={closeForm} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+            <button onClick={closeForm} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><X size={20}/></button>
           </div>
           
-          {/* Form Grid responsive fix */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {activeForm === 'opening_balance' && (
+              <>
+                <div className="lg:col-span-2">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Description</label>
+                  <input type="text" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500" value={openingData.description} onChange={(e) => setOpeningData({...openingData, description: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase mb-1 block">Cash Amount</label>
+                  <input type="number" placeholder="Enter Total RS" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500 font-semibold text-amber-700" value={openingData.amount || ''} onChange={(e) => setOpeningData({...openingData, amount: parseFloat(e.target.value) || 0})} />
+                </div>
+                <div className="flex items-end">
+                  <button onClick={handleOpeningSubmit} className="bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold w-full shadow-md hover:bg-amber-700 transition-colors">Confirm Cash</button>
+                </div>
+              </>
+            )}
+
             {activeForm === 'supplier_payment' && (
               <>
-                <select className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.supplierId} onChange={(e) => setSuppPaymentData({ ...suppPaymentData, supplierId: e.target.value })}>
+                <select className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={suppPaymentData.supplierId} onChange={(e) => setSuppPaymentData({ ...suppPaymentData, supplierId: e.target.value })}>
                   <option value="">Select Supplier</option>
                   {suppliers.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} (Payable: RS. {s.balance.toLocaleString()})
-                    </option>
+                    <option key={s.id} value={s.id}>{s.name} (Payable: {s.balance})</option>
                   ))}
                 </select>
-                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.amount || ''} onChange={(e) => setSuppPaymentData({...suppPaymentData, amount: parseFloat(e.target.value) || 0})} />
-                <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={suppPaymentData.description} onChange={(e) => setSuppPaymentData({...suppPaymentData, description: e.target.value})} />
-                <button onClick={handleSupplierPayment} className="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Save</button>
+                <input type="number" placeholder="Amount" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={suppPaymentData.amount || ''} onChange={(e) => setSuppPaymentData({...suppPaymentData, amount: parseFloat(e.target.value) || 0})} />
+                <input type="text" placeholder="Note/Cheque #" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" value={suppPaymentData.description} onChange={(e) => setSuppPaymentData({...suppPaymentData, description: e.target.value})} />
+                <button onClick={handleSupplierPayment} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold w-full hover:bg-blue-700">Save Payment</button>
               </>
             )}
+
             {activeForm === 'customer_payment' && (
               <>
-                <select className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.customerId} onChange={(e) => setCustPaymentData({ ...custPaymentData, customerId: e.target.value })}>
+                <select className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" value={custPaymentData.customerId} onChange={(e) => setCustPaymentData({ ...custPaymentData, customerId: e.target.value })}>
                   <option value="">Select Customer</option>
                   {customers.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} (Receivable: RS. {c.balance.toLocaleString()})
-                    </option>
+                    <option key={c.id} value={c.id}>{c.name} (Balance: {c.balance})</option>
                   ))}
                 </select>
-                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.amount || ''} onChange={(e) => setCustPaymentData({...custPaymentData, amount: parseFloat(e.target.value) || 0})} />
-                <input type="text" placeholder="Note" className="p-1.5 border rounded text-xs outline-none" value={custPaymentData.description} onChange={(e) => setCustPaymentData({...custPaymentData, description: e.target.value})} />
-                <button onClick={handleCustomerPayment} className="bg-green-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Save</button>
+                <input type="number" placeholder="Amount" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" value={custPaymentData.amount || ''} onChange={(e) => setCustPaymentData({...custPaymentData, amount: parseFloat(e.target.value) || 0})} />
+                <input type="text" placeholder="Note" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" value={custPaymentData.description} onChange={(e) => setCustPaymentData({...custPaymentData, description: e.target.value})} />
+                <button onClick={handleCustomerPayment} className="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold w-full hover:bg-green-700">Save Receipt</button>
               </>
             )}
+
             {activeForm === 'expense' && (
               <>
-                <input type="text" placeholder="Description" className="p-1.5 border rounded text-xs outline-none sm:col-span-1 lg:col-span-2" value={expenseData.description} onChange={(e) => setExpenseData({...expenseData, description: e.target.value})} />
-                <input type="number" placeholder="Amount" className="p-1.5 border rounded text-xs outline-none" value={expenseData.amount || ''} onChange={(e) => setExpenseData({...expenseData, amount: parseFloat(e.target.value) || 0})} />
-                <button onClick={handleExpenseSubmit} className="bg-red-600 text-white px-4 py-1.5 rounded text-xs font-medium w-full">Add</button>
+                <div className="lg:col-span-2">
+                  <input type="text" placeholder="Expense Description (e.g. Electricity, Rent)" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500" value={expenseData.description} onChange={(e) => setExpenseData({...expenseData, description: e.target.value})} />
+                </div>
+                <input type="number" placeholder="Amount" className="w-full p-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-red-500" value={expenseData.amount || ''} onChange={(e) => setExpenseData({...expenseData, amount: parseFloat(e.target.value) || 0})} />
+                <button onClick={handleExpenseSubmit} className="bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold w-full hover:bg-red-700">Add Expense</button>
               </>
             )}
           </div>
         </div>
       )}
 
-      {/* Filter bar - stacks on mobile */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pt-2 border-t">
-        <div className="flex items-center gap-2 bg-gray-50 px-2 py-1 rounded w-full md:w-auto">
-          <Calendar size={14} className="text-gray-400" />
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-xs outline-none flex-1" />
-          <span className="text-gray-300">to</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-xs outline-none flex-1" />
+      {/* Search and Date Filters */}
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg w-full md:w-auto border border-gray-100">
+          <Calendar size={16} className="text-gray-400" />
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent border-none text-xs outline-none font-semibold text-gray-600" />
+          <span className="text-gray-300 font-semibold text-xs uppercase">to</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent border-none text-xs outline-none font-semibold text-gray-600" />
         </div>
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+        
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input 
             type="text" 
-            placeholder="Search transaction..." 
+            placeholder="Search by name or note..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded text-xs outline-none focus:border-green-500" 
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500 transition-all" 
           />
         </div>
       </div>
 
-      {/* Table responsive fix - added overflow-x-auto */}
-      <div className="bg-white rounded border border-gray-200 overflow-hidden">
+      {/* Transactions Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-gray-50 text-gray-500 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Date</th>
-                <th className="px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider">Details</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Debit (-)</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Credit (+)</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider">Balance</th>
+          <table className="w-full text-left min-w-[700px]">
+            <thead className="bg-gray-50 text-gray-400 border-b border-gray-200">
+              <tr className="text-[10px] font-semibold uppercase tracking-widest">
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Transaction Details</th>
+                <th className="px-6 py-4 text-right">Debit (-)</th>
+                <th className="px-6 py-4 text-right">Credit (+)</th>
+                <th className="px-6 py-4 text-right">Running Balance</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredEntries.map((entry: any) => (
-                <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-gray-500">
-                    {new Date(entry.date).toLocaleDateString()}
+                <tr key={entry.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4 text-xs font-semibold text-gray-500">
+                    {new Date(entry.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm font-medium text-gray-700">{entry.description}</div>
-                    <div className="text-[10px] text-gray-400">{entry.customerName || entry.supplierName || 'General'}</div>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-semibold text-gray-800">{entry.description}</div>
+                    <div className="text-[10px] font-semibold text-blue-500 uppercase tracking-tight">
+                      {entry.customerName || entry.supplierName || 'General Account'}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-xs text-red-600 font-medium">
-                    {entry.debit > 0 ? entry.debit.toLocaleString() : '-'}
+                  <td className="px-6 py-4 text-right text-sm text-red-600 font-semibold">
+                    {entry.debit > 0 ? `-${entry.debit.toLocaleString()}` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-right text-xs text-green-600 font-medium">
-                    {entry.credit > 0 ? entry.credit.toLocaleString() : '-'}
+                  <td className="px-6 py-4 text-right text-sm text-green-600 font-semibold">
+                    {entry.credit > 0 ? `+${entry.credit.toLocaleString()}` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
                     {entry.balance.toLocaleString()}
                   </td>
                 </tr>
               ))}
+              {filteredEntries.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-10 text-center text-gray-400 italic">No transactions found for these filters.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
