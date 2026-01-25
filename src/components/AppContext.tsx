@@ -96,6 +96,8 @@ export interface Shop {
 
 interface AppContextType {
   shop: Shop | null;
+  userName: string;
+  userEmail: string;
   products: Product[];
   customers: Customer[];
   sales: Sale[];
@@ -126,16 +128,18 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 interface AppProviderProps {
   children: ReactNode;
   initialShop: Shop;
+  userName: string;
+  userEmail: string;
   onSignOut: () => void;
 }
 
-export function AppProvider({ children, initialShop, onSignOut }: AppProviderProps) {
+export function AppProvider({ children, initialShop, userName, userEmail, onSignOut }: AppProviderProps) {
   const [shop] = useState<Shop>(initialShop);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-   const [suppliers, setSuppliers] = useState<Supplier[]>([]);  // ADD THIS LINE
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]); 
   const [loading, setLoading] = useState(true);
 
@@ -143,30 +147,31 @@ export function AppProvider({ children, initialShop, onSignOut }: AppProviderPro
     loadData();
   }, []);
 
-const loadData = async () => {
-  setLoading(true);
-  try {
-    const [productsRes, customersRes, salesRes, ledgerRes, suppliersRes, purchasesRes] = await Promise.all([
-      productsAPI.getAll(),
-      customerApi.getAll(),
-      salesApi.getAll(),
-      ledgerApi.getAll(),
-      suppliersApi.getAll(),
-      purchasesApi.getAll(),
-    ]);
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [productsRes, customersRes, salesRes, ledgerRes, suppliersRes, purchasesRes] = await Promise.all([
+        productsAPI.getAll(),
+        customerApi.getAll(),
+        salesApi.getAll(),
+        ledgerApi.getAll(),
+        suppliersApi.getAll(),
+        purchasesApi.getAll(),
+      ]);
 
-    setProducts(productsRes.products || []);
-    setCustomers(customersRes.customers || []);
-    setSales(salesRes.sales || []);
-    setLedgerEntries(ledgerRes.ledger || []);
-    setSuppliers(suppliersRes.suppliers || []);  
-    setPurchases(purchasesRes.purchases || []);
-  } catch (error) {
-    console.error('Failed to load data:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+      setProducts(productsRes.products || []);
+      setCustomers(customersRes.customers || []);
+      setSales(salesRes.sales || []);
+      setLedgerEntries(ledgerRes.ledger || []);
+      setSuppliers(suppliersRes.suppliers || []);  
+      setPurchases(purchasesRes.purchases || []);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addSupplier = async (supplier: Omit<Supplier, 'id' | 'balance' | 'createdAt'>) => {
     try {
       const result = await suppliersApi.create(supplier);
@@ -176,7 +181,8 @@ const loadData = async () => {
       throw error;
     }
   };
-    const updateSupplier = async (id: string, updates: Partial<Supplier>) => {
+
+  const updateSupplier = async (id: string, updates: Partial<Supplier>) => {
     try {
       const result = await suppliersApi.update(id, updates);
       setSuppliers(suppliers.map(s => s.id === id ? result.supplier : s));
@@ -185,6 +191,7 @@ const loadData = async () => {
       throw error;
     }
   };
+
   const deleteSupplier = async (id: string) => {
     try {
       await suppliersApi.delete(id);
@@ -194,7 +201,8 @@ const loadData = async () => {
       throw error;
     }
   };
-    const addPurchase = async (purchase: Omit<Purchase, 'id' | 'date'>) => {
+
+  const addPurchase = async (purchase: Omit<Purchase, 'id' | 'date'>) => {
     try {
       const result = await purchasesApi.create(purchase);
       setPurchases([result.purchase, ...purchases]);
@@ -204,7 +212,8 @@ const loadData = async () => {
       throw error;
     }
   };
-   const addSupplierPayment = async (supplierId: string, amount: number, description: string) => {
+
+  const addSupplierPayment = async (supplierId: string, amount: number, description: string) => {
     try {
       await ledgerApi.supplierPayment(supplierId, amount, description);
       await loadData();
@@ -213,8 +222,6 @@ const loadData = async () => {
       throw error;
     }
   };
-
-
 
   const refreshData = async () => {
     await loadData();
@@ -280,10 +287,16 @@ const loadData = async () => {
     }
   };
 
+  // Inside AppProvider component - Updated to use userName instead of shop?.ownerName
   const addSale = async (sale: Omit<Sale, 'id' | 'date'>) => {
     try {
-      const result = await salesApi.create(sale);
-      // Refresh all data to get updated stock, customer balances, and ledger
+      // Inject the current logged-in user's name into the sale data
+      const saleWithUser = {
+        ...sale,
+        soldBy: sale.soldBy || userName || userEmail || 'Admin'
+      };
+
+      const result = await salesApi.create(saleWithUser);
       await refreshData();
     } catch (error) {
       console.error('Failed to add sale:', error);
@@ -325,6 +338,8 @@ const loadData = async () => {
     <AppContext.Provider
       value={{
         shop,
+        userName,
+        userEmail,
         products,
         customers,
         sales,
@@ -341,11 +356,11 @@ const loadData = async () => {
         addSale,
         addLedgerEntry,
         addPayment,
-        addSupplier,  // Add this
-    updateSupplier,  // Add this
-    deleteSupplier,  // Add this
-    addPurchase,  // Add this
-    addSupplierPayment, 
+        addSupplier,
+        updateSupplier,
+        deleteSupplier,
+        addPurchase,
+        addSupplierPayment, 
         refreshData,
         signOut,
       }}
