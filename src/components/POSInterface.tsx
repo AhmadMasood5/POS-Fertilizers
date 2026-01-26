@@ -3,7 +3,7 @@ import { useApp, SaleItem } from './AppContext';
 import { Search, Plus, Minus, Trash2, ShoppingCart, AlertTriangle } from 'lucide-react';
 
 export function POSInterface() {
-  const { products, customers, addSale } = useApp();
+  const { products, customers, addSale, purchases, sales } = useApp();
   const [cart, setCart] = useState<SaleItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +12,100 @@ export function POSInterface() {
   const [amountPaid, setAmountPaid] = useState(0);
   const [editingPrice, setEditingPrice] = useState<{ [key: string]: boolean }>({});
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // 🔥 Calculate BOTH weighted average and FIFO cost
+  const getCostPrices = (productId: string, quantityToSell: number) => {
+    // === WEIGHTED AVERAGE CALCULATION ===
+    let totalCost = 0;
+    let totalQuantity = 0;
+
+    purchases.forEach(purchase => {
+      purchase.items.forEach(item => {
+        if (item.productId === productId) {
+          totalCost += item.price * item.quantity;
+          totalQuantity += item.quantity;
+        }
+      });
+    });
+
+    const weightedAvg = totalQuantity > 0 ? totalCost / totalQuantity : 0;
+
+    // === FIFO CALCULATION ===
+    const batches: Array<{date: string, price: number, quantity: number, remaining: number}> = [];
+    
+    purchases
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .forEach(purchase => {
+        purchase.items.forEach(item => {
+          if (item.productId === productId) {
+            batches.push({
+              date: purchase.date,
+              price: item.price,
+              quantity: item.quantity,
+              remaining: item.quantity
+            });
+          }
+        });
+      });
+
+    // Calculate how much has been sold
+    let totalSold = 0;
+    sales.forEach(sale => {
+      sale.items.forEach(item => {
+        if (item.productId === productId) {
+          totalSold += item.quantity;
+        }
+      });
+    });
+
+    // Deduct sold quantities from oldest batches first
+    let remainingToDeduct = totalSold;
+    for (let i = 0; i < batches.length; i++) {
+      if (remainingToDeduct <= 0) break;
+      const deductFromBatch = Math.min(batches[i].remaining, remainingToDeduct);
+      batches[i].remaining -= deductFromBatch;
+      remainingToDeduct -= deductFromBatch;
+    }
+
+    // Calculate FIFO cost
+    let fifoCost = 0;
+    let remainingToSell = quantityToSell;
+
+    for (let i = 0; i < batches.length; i++) {
+      if (remainingToSell <= 0) break;
+      if (batches[i].remaining <= 0) continue;
+
+      const takeFromBatch = Math.min(batches[i].remaining, remainingToSell);
+      fifoCost += takeFromBatch * batches[i].price;
+      remainingToSell -= takeFromBatch;
+    }
+
+    const fifoPerUnit = quantityToSell > 0 ? fifoCost / quantityToSell : 0;
+
+    // Fallback logic
+    let finalFifo = fifoPerUnit;
+    let finalAvg = weightedAvg;
+
+    if (fifoPerUnit === 0 && batches.length > 0) {
+      // Use latest purchase price as fallback
+      finalFifo = batches[batches.length - 1].price;
+    }
+
+    if (weightedAvg === 0) {
+      const product = products.find(p => p.id === productId);
+      finalAvg = (product as any)?.costPrice || 0;
+      finalFifo = finalFifo || finalAvg;
+    }
+
+    console.log(`📊 Cost Analysis for Product ${productId}:`);
+    console.log(`   Weighted Average: ${finalAvg.toFixed(2)}`);
+    console.log(`   FIFO Cost: ${finalFifo.toFixed(2)}`);
+
+    return {
+      weightedAverage: finalAvg,
+      fifoCost: finalFifo
+    };
+  };
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -22,16 +116,20 @@ export function POSInterface() {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    // ✅ Check if product has stock
     if (product.stock <= 0) {
       alert(`${product.name} is out of stock!`);
       return;
     }
 
+    // 🔥 Calculate both weighted average and FIFO cost
+    const costs = getCostPrices(product.id, 1);
+    
+    // Use FIFO for accurate period-based costing
+    const avgCost = costs.fifoCost;
+
     const existingItem = cart.find(item => item.productId === productId);
     
     if (existingItem) {
-      // ✅ Check if adding one more would exceed stock
       if (existingItem.quantity + 1 > product.stock) {
         alert(`Cannot add more ${product.name}. Only ${product.stock} available in stock.`);
         return;
@@ -39,7 +137,12 @@ export function POSInterface() {
       
       setCart(cart.map(item =>
         item.productId === productId
-          ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
+          ? { 
+              ...item, 
+              quantity: item.quantity + 1, 
+              total: (item.quantity + 1) * item.price,
+              costPrice: avgCost
+            }
           : item
       ));
     } else {
@@ -48,6 +151,7 @@ export function POSInterface() {
         productName: product.name,
         quantity: 1,
         price: product.price,
+        costPrice: avgCost,
         total: product.price,
       }]);
     }
@@ -61,16 +165,22 @@ export function POSInterface() {
       if (item.productId === productId) {
         const newQuantity = item.quantity + change;
         
-        // ✅ Prevent going below 1
         if (newQuantity < 1) return item;
         
-        // ✅ Check stock availability
         if (newQuantity > product.stock) {
           alert(`Cannot add more. Only ${product.stock} ${product.unit} available in stock.`);
           return item;
         }
         
-        return { ...item, quantity: newQuantity, total: newQuantity * item.price };
+        // 🔥 Recalculate FIFO cost for the new quantity
+        const costs = getCostPrices(product.id, newQuantity);
+        
+        return { 
+          ...item, 
+          quantity: newQuantity, 
+          total: newQuantity * item.price,
+          costPrice: costs.fifoCost // ✅ Update cost price for new quantity
+        };
       }
       return item;
     }));
@@ -92,7 +202,15 @@ export function POSInterface() {
 
     setCart(cart.map(item => {
       if (item.productId === productId) {
-        return { ...item, quantity: newQty, total: newQty * item.price };
+        // 🔥 Recalculate FIFO cost for the manually entered quantity
+        const costs = getCostPrices(product.id, newQty);
+        
+        return { 
+          ...item, 
+          quantity: newQty, 
+          total: newQty * item.price,
+          costPrice: costs.fifoCost // ✅ Update cost price
+        };
       }
       return item;
     }));
@@ -136,7 +254,6 @@ export function POSInterface() {
       return;
     }
 
-    // ✅ Final stock validation before checkout
     for (const item of cart) {
       const product = products.find(p => p.id === item.productId);
       if (!product) {
@@ -169,7 +286,6 @@ export function POSInterface() {
         balance: Math.max(0, balance),
       });
 
-      // Reset
       setCart([]);
       setSelectedCustomer('');
       setDiscount(0);
@@ -178,7 +294,6 @@ export function POSInterface() {
       setEditingPrice({});
       alert('Sale completed successfully!');
     } catch (error: any) {
-      // ✅ Show backend error message
       alert(error.message || 'Failed to complete sale. Please try again.');
       console.error('Sale error:', error);
     } finally {
@@ -256,10 +371,10 @@ export function POSInterface() {
                 <div key={item.productId} className={`border border-gray-200 rounded p-2 ${
                   hasStockIssue ? 'bg-red-50' : ''
                 }`}>
-                  {/* Product Name and Remove Button */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <p className="font-medium text-sm text-gray-800">{item.productName}</p>
+                      <p className="text-xs text-gray-400">FIFO Cost: RS.{((item as any).costPrice || 0).toFixed(2)}</p>
                       {hasStockIssue && (
                         <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
                           <AlertTriangle size={10} />
@@ -275,7 +390,6 @@ export function POSInterface() {
                     </button>
                   </div>
 
-                  {/* Price Row with Edit Toggle */}
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs text-gray-500">Price:</span>
                     {isPriceEditing ? (
@@ -306,7 +420,6 @@ export function POSInterface() {
                     </button>
                   </div>
 
-                  {/* Quantity and Total Row */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <button
