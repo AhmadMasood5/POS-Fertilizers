@@ -24,6 +24,7 @@ export interface PurchaseItem {
   productName: string;
   quantity: number;
   price: number;
+  costPrice?: number; 
   total: number;
 }
 
@@ -53,6 +54,7 @@ export interface SaleItem {
   productName: string;
   quantity: number;
   price: number;
+  costPrice?: number;
   total: number;
 }
 
