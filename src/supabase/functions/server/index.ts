@@ -161,6 +161,32 @@ app.post("/auth/signup", async (c) => {
       await kv.set(`ledger:${userId}`, JSON.stringify([]));
       await kv.set(`users:${userId}`, JSON.stringify([]));
 
+      // Create default Cash account for super admin
+      const superAdminCashAccount = {
+        id: `cash_${userId}_${Date.now()}`,
+        name: 'Cash',
+        type: 'cash',
+        category: 'Assets',
+        balance: 0,
+        description: 'Default cash account for daily transactions',
+        createdAt: new Date().toISOString(),
+      };
+      const superAdminBanks = [superAdminCashAccount];
+      await kv.set(`banks:${userId}`, JSON.stringify(superAdminBanks));
+
+      // Create default Shop Expense account for super admin
+      const superAdminExpenseAccount = {
+        id: `expense_${userId}_${Date.now()}`,
+        name: 'Shop Expense',
+        type: 'expense',
+        category: 'Expenses',
+        balance: 0,
+        description: 'Default shop expense account',
+        createdAt: new Date().toISOString(),
+      };
+      const superAdminAccounts = [superAdminExpenseAccount];
+      await kv.set(`accounts:${userId}`, JSON.stringify(superAdminAccounts));
+
       return c.json({
         message:
           "Super Admin account created successfully! You can now sign in.",
@@ -799,6 +825,36 @@ app.post('/api/admin/approve/:userId', async (c) => {
     await kv.set(`sales:${userId}`, JSON.stringify([]));
     await kv.set(`ledger:${userId}`, JSON.stringify([]));
     await kv.set(`users:${userId}`, JSON.stringify([])); // For team members
+    
+    // Create default Cash account (in banks)
+    const cashAccount = {
+      id: `cash_${userId}_${Date.now()}`,
+      name: 'Cash',
+      type: 'cash',
+      category: 'Assets',
+      balance: 0,
+      description: 'Default cash account for daily transactions',
+      createdAt: new Date().toISOString(),
+    };
+    const banksData = await kv.get(`banks:${userId}`);
+    const banks = banksData ? JSON.parse(banksData) : [];
+    banks.push(cashAccount);
+    await kv.set(`banks:${userId}`, JSON.stringify(banks));
+
+    // Create default Shop Expense account (in accounts)
+    const expenseAccount = {
+      id: `expense_${userId}_${Date.now()}`,
+      name: 'Shop Expense',
+      type: 'expense',
+      category: 'Expenses',
+      balance: 0,
+      description: 'Default shop expense account',
+      createdAt: new Date().toISOString(),
+    };
+    const accountsData = await kv.get(`accounts:${userId}`);
+    const accounts = accountsData ? JSON.parse(accountsData) : [];
+    accounts.push(expenseAccount);
+    await kv.set(`accounts:${userId}`, JSON.stringify(accounts));
 
     // Update pending status
     pendingRequest.status = APPROVAL_STATUS.APPROVED;

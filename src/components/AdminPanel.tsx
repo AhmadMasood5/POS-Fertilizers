@@ -95,21 +95,22 @@ export function AdminPanel() {
   };
 
   const handleExtendSubscription = async (shop: any) => {
-    const months = prompt('Enter number of months to extend (1-12):', '1');
-    if (!months || isNaN(Number(months)) || Number(months) < 1) return;
+  const days = prompt('Enter number of days to extend (1-365):', '1');
+  if (!days || isNaN(Number(days)) || Number(days) < 1) return;
 
-    setProcessingId(shop.id);
-    try {
-      await adminApi.extendSubscription(shop.id, Number(months));
-      alert(`Subscription extended by ${months} month(s)!`);
-      await loadApprovedShops();
-      setShowStatusModal(false);
-    } catch (error: any) {
-      alert(`Failed to extend subscription: ${error.message}`);
-    } finally {
-      setProcessingId(null);
-    }
-  };
+  setProcessingId(shop.id);
+  try {
+    await adminApi.extendSubscription(shop.id, Number(days)); // backend should expect days now
+    alert(`Subscription extended by ${days} day(s)!`);
+    await loadApprovedShops();
+    setShowStatusModal(false);
+  } catch (error: any) {
+    alert(`Failed to extend subscription: ${error.message}`);
+  } finally {
+    setProcessingId(null);
+  }
+};
+
 
   const getStatusBadge = (status: string) => {
     const styles = {

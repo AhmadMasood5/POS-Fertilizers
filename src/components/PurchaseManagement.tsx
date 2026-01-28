@@ -4,13 +4,19 @@ import { purchasesApi } from '../utils/api';
 import { Search, Plus, Minus, Trash2, ShoppingBag, Truck, AlertTriangle, DollarSign } from 'lucide-react';
 
 export function PurchaseManagement() {
-  const { products, suppliers, refreshData } = useApp();
+  const { products, suppliers, accounts, addAccountTransaction, getLiveBalance, refreshData } = useApp();
   const [cart, setCart] = useState<any[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<string>('');
+  const [selectedAccount, setSelectedAccount] = useState<string>(''); // New: Selected cash/bank account
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
   const [amountPaid, setAmountPaid] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filter to show only Cash and Bank accounts (not Shop Expense)
+  const liquidAccounts = (accounts || []).filter(acc => 
+    acc && (acc.type === 'bank' || acc.type === 'cash')
+  );
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,15 +80,25 @@ export function PurchaseManagement() {
   const handleCompletePurchase = async () => {
     if (cart.length === 0) return alert('Cart is empty');
     if (!selectedSupplier) return alert('Please select a supplier');
+    if (!selectedAccount) return alert('Please select a cash/bank account for this transaction');
 
     const supplier = suppliers.find(s => s.id === selectedSupplier);
     if (!supplier) return;
 
-    setIsSubmitting(true);
     const paidAmount = paymentMethod === 'cash' ? total : amountPaid;
     const balance = total - paidAmount;
 
+    // Check if account has sufficient balance
+    const accountBalance = getLiveBalance(selectedAccount, 'account');
+    if (accountBalance < paidAmount) {
+      alert(`Insufficient balance in selected account!\n\nAvailable: RS. ${accountBalance.toLocaleString()}\nRequired: RS. ${paidAmount.toLocaleString()}\n\nPlease select a different account or reduce payment amount.`);
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
+      // 1. Create the purchase record (this updates supplier ledger and inventory)
       await purchasesApi.create({
         supplierId: supplier.id,
         supplierName: supplier.name,
@@ -101,8 +117,24 @@ export function PurchaseManagement() {
         balance: Math.max(0, balance),
       });
 
+      // 2. Create account transaction to update bank/cash balance
+      // This is separate from supplier ledger (which backend handles)
+      if (paidAmount > 0) {
+        await addAccountTransaction({
+          debitAccountId: 'PURCHASE_EXPENSE', // Purchase expense
+          creditAccountId: selectedAccount, // Money going OUT (credit decreases assets)
+          amount: paidAmount,
+          description: paymentMethod === 'cash'
+            ? `Cash Purchase from ${supplier.name}`
+            : `Payment to ${supplier.name}`,
+          date: new Date().toISOString().split('T')[0],
+          reference: supplier.id
+        });
+      }
+
       setCart([]);
       setSelectedSupplier('');
+      setSelectedAccount('');
       setAmountPaid(0);
       setPaymentMethod('cash');
       await refreshData();
@@ -278,6 +310,55 @@ export function PurchaseManagement() {
               </select>
             </div>
 
+            {/* Account selection - ALWAYS VISIBLE AND REQUIRED */}
+            <div>
+              <label className="block text-xs font-bold text-red-700 uppercase mb-1">
+                💳 Pay From Account <span className="text-red-600">*</span>
+              </label>
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-red-300 bg-red-50 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 font-medium"
+                required
+              >
+                <option value="">-- Select Cash/Bank Account --</option>
+                {liquidAccounts.map(acc => {
+                  const balance = getLiveBalance(acc.id, 'account');
+                  return (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} (Bal: RS. {balance.toLocaleString()})
+                    </option>
+                  );
+                })}
+              </select>
+              {!selectedAccount && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                  <AlertTriangle size={12} />
+                  Please select an account to proceed
+                </p>
+              )}
+              {selectedAccount && (
+                <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-red-700">Available Balance:</span>
+                    <span className="font-bold text-red-900">RS. {getLiveBalance(selectedAccount, 'account').toLocaleString()}</span>
+                  </div>
+                  {paymentMethod === 'cash' && getLiveBalance(selectedAccount, 'account') < total && (
+                    <p className="text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle size={12} />
+                      Insufficient funds! Need RS. {total.toLocaleString()}
+                    </p>
+                  )}
+                  {paymentMethod === 'credit' && amountPaid > 0 && getLiveBalance(selectedAccount, 'account') < amountPaid && (
+                    <p className="text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle size={12} />
+                      Insufficient funds! Need RS. {amountPaid.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Payment Method</label>
               <div className="flex gap-2">
@@ -321,11 +402,33 @@ export function PurchaseManagement() {
             </div>
 
             <button
-              disabled={isSubmitting || cart.length === 0 || !selectedSupplier}
+              disabled={
+                isSubmitting || 
+                cart.length === 0 || 
+                !selectedSupplier || 
+                !selectedAccount ||
+                (!!selectedAccount && getLiveBalance(selectedAccount, 'account') < (paymentMethod === 'cash' ? total : amountPaid))
+              }
               onClick={handleCompletePurchase}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors disabled:bg-gray-300 text-sm"
+              className={`w-full py-3 rounded-lg font-bold transition-colors text-sm ${
+                isSubmitting || 
+                cart.length === 0 || 
+                !selectedSupplier || 
+                !selectedAccount ||
+                (!!selectedAccount && getLiveBalance(selectedAccount, 'account') < (paymentMethod === 'cash' ? total : amountPaid))
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              {isSubmitting ? 'Processing...' : 'Complete Purchase & Update Stock'}
+              {isSubmitting ? (
+                'Processing...'
+              ) : !selectedAccount ? (
+                'Select Account First'
+              ) : (!!selectedAccount && getLiveBalance(selectedAccount, 'account') < (paymentMethod === 'cash' ? total : amountPaid)) ? (
+                'Insufficient Balance'
+              ) : (
+                'Complete Purchase & Update Stock'
+              )}
             </button>
           </div>
         </div>
