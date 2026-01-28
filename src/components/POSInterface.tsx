@@ -1,17 +1,23 @@
 import { useState } from 'react';
-import { useApp, SaleItem } from './AppContext';
+import { useApp } from './AppContext';
 import { Search, Plus, Minus, Trash2, ShoppingCart, AlertTriangle } from 'lucide-react';
 
 export function POSInterface() {
-  const { products, customers, addSale, purchases, sales } = useApp();
-  const [cart, setCart] = useState<SaleItem[]>([]);
+  const { products, customers, accounts, addSale, purchases, sales, addAccountTransaction, getLiveBalance } = useApp();
+  const [cart, setCart] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [discount, setDiscount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
+  const [selectedAccount, setSelectedAccount] = useState<string>(''); // New: Selected cash/bank account
   const [amountPaid, setAmountPaid] = useState(0);
   const [editingPrice, setEditingPrice] = useState<{ [key: string]: boolean }>({});
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Filter to show only Cash and Bank accounts (not Shop Expense)
+  const liquidAccounts = (accounts || []).filter(acc => 
+    acc && (acc.type === 'bank' || acc.type === 'cash')
+  );
 
   // 🔥 Calculate BOTH weighted average and FIFO cost
   const getCostPrices = (productId: string, quantityToSell: number) => {
@@ -253,6 +259,10 @@ export function POSInterface() {
       alert('Please select a customer');
       return;
     }
+    if (!selectedAccount) {
+      alert('Please select a cash/bank account for this transaction');
+      return;
+    }
 
     for (const item of cart) {
       const product = products.find(p => p.id === item.productId);
@@ -274,6 +284,7 @@ export function POSInterface() {
 
     setIsProcessing(true);
     try {
+      // 1. Create the sale (this updates customer ledger and inventory)
       await addSale({
         customerId: customer.id,
         customerName: customer.name,
@@ -284,10 +295,27 @@ export function POSInterface() {
         paymentMethod,
         amountPaid: paidAmount,
         balance: Math.max(0, balance),
+        accountId: selectedAccount,
       });
+
+      // 2. Create account transaction to update bank/cash balance
+      // This is separate from customer ledger (which backend handles)
+      if (paidAmount > 0) {
+        await addAccountTransaction({
+          debitAccountId: selectedAccount, // Money coming IN (debit increases assets)
+          creditAccountId: 'SALES_REVENUE', // Revenue account or could use customer ID
+          amount: paidAmount,
+          description: paymentMethod === 'cash' 
+            ? `Cash Sale - ${customer.name}` 
+            : `Payment received from ${customer.name}`,
+          date: new Date().toISOString().split('T')[0],
+          reference: customer.id
+        });
+      }
 
       setCart([]);
       setSelectedCustomer('');
+      setSelectedAccount('');
       setDiscount(0);
       setAmountPaid(0);
       setPaymentMethod('cash');
@@ -472,6 +500,42 @@ export function POSInterface() {
               </select>
             </div>
 
+            {/* Account selection - ALWAYS VISIBLE AND REQUIRED */}
+            <div>
+              <label className="block text-sm font-medium text-green-700 mb-1">
+                💰 Deposit To Account <span className="text-red-600">*</span>
+              </label>
+              <div className="flex flex-col gap-2">
+                <select
+                  value={selectedAccount}
+                  onChange={(e) => setSelectedAccount(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-green-300 bg-green-50 rounded focus:outline-none focus:ring-2 focus:ring-green-500 font-medium"
+                  required
+                >
+                  <option value="">-- Select Cash/Bank Account --</option>
+                  {liquidAccounts.map(acc => {
+                    const balance = getLiveBalance(acc.id, 'account');
+                    return (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} (Bal: RS. {balance.toLocaleString()})
+                      </option>
+                    );
+                  })}
+                </select>
+                {!selectedAccount && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    Please select an account to proceed
+                  </p>
+                )}
+                {selectedAccount && (
+                  <div className="text-xs font-semibold text-green-700 bg-green-100 p-2 rounded border border-green-300">
+                    Current Balance: RS. {getLiveBalance(selectedAccount, 'account').toLocaleString()}
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Discount (RS.)</label>
               <input
@@ -543,9 +607,9 @@ export function POSInterface() {
 
             <button
               onClick={handleCheckout}
-              disabled={isProcessing}
+              disabled={isProcessing || !selectedAccount}
               className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-                isProcessing
+                (isProcessing || !selectedAccount)
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
@@ -558,6 +622,8 @@ export function POSInterface() {
                   </svg>
                   <span>Processing Sale...</span>
                 </>
+              ) : !selectedAccount ? (
+                <span>Select Account First</span>
               ) : (
                 'Complete Sale'
               )}
